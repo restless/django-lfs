@@ -23,14 +23,18 @@ from lfs.manage.categories.view import category_view
 from lfs.manage.categories.portlet import manage_categories_portlet
 from lfs.manage.seo.views import SEOView
 from lfs.manage.views.lfs_portlets import portlets_inline
+from lfs.core.translation_utils import prepare_fields_order
 
 
 class CategoryAddForm(ModelForm):
     """Process form to add a category.
     """
+    def __init__(self, *args, **kwargs):
+        super(CategoryAddForm, self).__init__(*args, **kwargs)
+        self.fields.keyOrder = prepare_fields_order(self, 'name', 'slug')
+
     class Meta:
         model = Category
-        fields = ("name", "slug")
 
 
 class CategoryForm(ModelForm):
@@ -45,10 +49,12 @@ class CategoryForm(ModelForm):
         except KeyError:
             context = None
 
+        self.fields.keyOrder = prepare_fields_order(self, "name", "slug", "short_description", "description", "short_description",
+                "exclude_from_navigation", "image", "static_block")
+        print self.fields.keyOrder
+
     class Meta:
         model = Category
-        fields = ("name", "slug", "short_description", "description", "short_description",
-        "exclude_from_navigation", "image", "static_block")
 
 
 @permission_required("core.manage_shop")

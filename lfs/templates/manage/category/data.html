@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n lfs_modeltranslation_tags %}
 
 <h2>{% trans 'Data' %}</h2>
 
@@ -15,21 +15,23 @@
                 {{ form.exclude_from_navigation }}
             </div>
         </div>
-        <div class="field">
-            <div class="label">
+        {% translatedfields form "name" %}
+            <div class="field">
+                <div class="label">
                 {{ form.name.label_tag }}:
-            </div>
+                </div>
             {% if form.name.errors %}
                 <div class="error">
                     {{ form.name }}
                     {{ form.name.errors }}
-                </div>
-            {% else %}
-                <div>
+                    </div>
+                {% else %}
+                    <div>
                     {{ form.name }}
-                </div>
-            {% endif %}
-        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endtranslatedfields %}
         <div class="field">
             <div class="label">
                 {{ form.slug.label_tag }}:
