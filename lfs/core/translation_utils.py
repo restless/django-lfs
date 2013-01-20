@@ -33,3 +33,11 @@ def get_languages_list():
     if not langs:
         langs = [language[0] for language in settings.LANGUAGES]
     return langs
+
+
+def get_default_language():
+    try:
+        from modeltranslation.settings import DEFAULT_LANGUAGE
+    except ImportError:
+        DEFAULT_LANGUAGE = settings.LANGUAGE_CODE
+    return DEFAULT_LANGUAGE

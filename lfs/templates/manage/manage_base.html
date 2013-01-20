@@ -1,4 +1,4 @@
-{% load i18n sql compress %}
+{% load i18n sql lfs_modeltranslation_tags compress %}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -14,6 +14,7 @@
         {% endcompress %}
         <script type="text/javascript">
             var LFS_MANAGE_IMAGEBROWSER_URL = '{% url lfs_manage_imagebrowser %}';
+            {% get_translation_languages_js %}
             var STATIC_URL = '{{ STATIC_URL }}';
         </script>
         {% compress js %}

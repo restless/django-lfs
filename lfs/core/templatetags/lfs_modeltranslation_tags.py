@@ -3,7 +3,8 @@ from django.template import Library
 from django import template
 from django.utils.safestring import mark_safe
 
-from lfs.core.translation_utils import get_translation_fields, build_localized_fieldname, get_languages_list
+from lfs.core.translation_utils import (get_translation_fields, build_localized_fieldname, get_languages_list,
+                                        get_default_language)
 
 register = Library()
 
@@ -24,14 +25,22 @@ class NTFieldsNode(template.Node):
         out = [form[tname] for tname in get_translation_fields(field_name)]
         context['%s_translations' % field_name] = out
 
+        default_language = get_default_language()
+
         output = []
         for lang in get_languages_list():
             tname = build_localized_fieldname(field_name, lang)
-            import pdb;pdb.set_trace()
-            context['tfield'] = form[tname]
-            form.fields[field_name].field = form[tname]
+            context['translated_field'] = form[tname]
+            if lang == default_language:
+                setattr(context['translated_field'], 'default_language', True)
+                attrs = context['translated_field'].field.widget.attrs
+                if not attrs:
+                    attrs = {}
+                css_classes = attrs.get('class', '').split(' ')
+                css_classes.append('default_language')
+                attrs['class'] = ' '.join(css_classes).strip()
+                context['translated_field'].field.widget.attrs = attrs
             output.append(self.nodelist.render(context))
-
         return ''.join(output)
 
 

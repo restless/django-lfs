@@ -46,13 +46,24 @@ function addEditor(selector, hide_save, height) {
 };
 
 function update_editor() {
+    var l = TRANSLATION_LANGUAGES.length;
+    for (var i=0; i<l; i++){
+        var lang = TRANSLATION_LANGUAGES[i];
+        addEditor("#id_description_" + lang);
+        addEditor("#id_short_description_" + lang, false, '200');
+        addEditor("#id_short_text_" + lang, false, '200');
+        addEditor("#id_body_" + lang);
+        addEditor('#id_html_' + lang);
+        addEditor('#id_note_' + lang);
+    }
     addEditor("#id_description");
-    addEditor("#id_short_description");
-    addEditor("#id_short_text");
+    addEditor("#id_short_description", false, '200');
+    addEditor("#id_short_text", false, '200');
     addEditor("#id_body");
     addEditor('#id_html');
     addEditor('#id_note');
 }
+
 
 function save(ed) {
     $("#" + ed.id).parents("form:first").ajaxSubmit({
