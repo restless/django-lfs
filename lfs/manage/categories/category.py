@@ -23,7 +23,7 @@ from lfs.manage.categories.view import category_view
 from lfs.manage.categories.portlet import manage_categories_portlet
 from lfs.manage.seo.views import SEOView
 from lfs.manage.views.lfs_portlets import portlets_inline
-from lfs.core.translation_utils import prepare_fields_order
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields
 
 
 class CategoryAddForm(ModelForm):
@@ -42,7 +42,8 @@ class CategoryForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
-        self.fields["image"].widget = LFSImageInput()
+        for fname in get_translation_fields("image"):
+            self.fields[fname].widget = LFSImageInput()
 
         try:
             context = kwargs["instance"]
@@ -51,7 +52,6 @@ class CategoryForm(ModelForm):
 
         self.fields.keyOrder = prepare_fields_order(self, "name", "slug", "short_description", "description", "short_description",
                 "exclude_from_navigation", "image", "static_block")
-        print self.fields.keyOrder
 
     class Meta:
         model = Category

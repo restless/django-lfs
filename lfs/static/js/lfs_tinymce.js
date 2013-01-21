@@ -15,7 +15,7 @@ function addEditor(selector, hide_save, height) {
     // Theme options
     $(selector).tinymce({
         // Location of TinyMCE script
-        script_url : STATIC_URL + 'tiny_mce-3.5b3/tiny_mce.js',
+        script_url : STATIC_URL + 'tiny_mce-3.5.8/tiny_mce.js',
 
         // General options
         theme : "advanced",
@@ -49,12 +49,30 @@ function update_editor() {
     var l = TRANSLATION_LANGUAGES.length;
     for (var i=0; i<l; i++){
         var lang = TRANSLATION_LANGUAGES[i];
+
+        if (typeof(tinyMCE) != 'undefined'){
+            $("#id_description_" + lang).tinymce().remove();
+            $("#id_short_description_" + lang).tinymce().remove();
+            $("#id_short_text_" + lang).tinymce().remove();
+            $("#id_body_" + lang).tinymce().remove();
+            $("#id_html_" + lang).tinymce().remove();
+            $("#id_note_" + lang).tinymce().remove();
+        }
+
         addEditor("#id_description_" + lang);
         addEditor("#id_short_description_" + lang, false, '200');
         addEditor("#id_short_text_" + lang, false, '200');
         addEditor("#id_body_" + lang);
         addEditor('#id_html_' + lang);
         addEditor('#id_note_' + lang);
+    }
+    if (typeof(tinyMCE) != 'undefined'){
+        $("#id_description").tinymce().remove();
+        $("#id_short_description").tinymce().remove();
+        $("#id_short_text").tinymce().remove();
+        $("#id_body").tinymce().remove();
+        $("#id_html").tinymce().remove();
+        $("#id_note").tinymce().remove();
     }
     addEditor("#id_description");
     addEditor("#id_short_description", false, '200');

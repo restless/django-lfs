@@ -87,21 +87,23 @@
     {% endtranslatedfields %}
     <fieldset>
         <legend>{% trans "Appearance" %}</legend>
-            <div class="field">
-                <div class="label">
-                    {% trans "Image" %}
+            {% translatedfields form "image" %}
+                <div class="field">
+                    <div class="label">
+                        {{ translated_field.label_tag }}
+                    </div>
+                    {% if translated_field.errors %}
+                        <div class="error">
+                            {{ translated_field }}
+                            {{ translated_field.errors }}
+                        </div>
+                    {% else %}
+                        <div>
+                            {{ translated_field }}
+                        </div>
+                    {% endif %}
                 </div>
-                {% if form.image.errors %}
-                    <div class="error">
-                        {{ form.image }}
-                        {{ form.image.errors }}
-                    </div>
-                {% else %}
-                    <div>
-                        {{ form.image }}
-                    </div>
-                {% endif %}
-            </div>
+            {% endtranslatedfields %}
             <div class="field">
                 <div class="label">
                     {{ form.static_block.label_tag }}:
