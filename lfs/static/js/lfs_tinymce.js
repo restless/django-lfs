@@ -43,43 +43,33 @@ function addEditor(selector, hide_save, height) {
             });
         }
    });
-};
+}
+
+
+var TINYMCE_FIELD_IDS = [{id: "#id_description", hide_save: false, height: null},
+                         {id: "#id_short_description", hide_save: false, height: '200'},
+                         {id: "#id_short_text", hide_save: false, height: '200'},
+                         {id: "#id_body", hide_save: false, height: null},
+                         {id: "#id_html", hide_save: false, height: null},
+                         {id: "#id_note", hide_save: false, height: null}];
 
 function update_editor() {
-    var l = TRANSLATION_LANGUAGES.length;
-    for (var i=0; i<l; i++){
-        var lang = TRANSLATION_LANGUAGES[i];
+    /* for each field first detach tinymce and then attach again */
+    $.each(TINYMCE_FIELD_IDS, function(idx, item){
+        // translated fields
+        $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
+            if (typeof(tinyMCE) != 'undefined'){
+                $(item['id'] + "_" + lang).tinymce().remove();
+            }
+            addEditor(item['id'] + "_" + lang, item['hide_save'], item['height']);
+        });
 
-        if (typeof(tinyMCE) != 'undefined'){
-            $("#id_description_" + lang).tinymce().remove();
-            $("#id_short_description_" + lang).tinymce().remove();
-            $("#id_short_text_" + lang).tinymce().remove();
-            $("#id_body_" + lang).tinymce().remove();
-            $("#id_html_" + lang).tinymce().remove();
-            $("#id_note_" + lang).tinymce().remove();
-        }
-
-        addEditor("#id_description_" + lang);
-        addEditor("#id_short_description_" + lang, false, '200');
-        addEditor("#id_short_text_" + lang, false, '200');
-        addEditor("#id_body_" + lang);
-        addEditor('#id_html_' + lang);
-        addEditor('#id_note_' + lang);
-    }
-    if (typeof(tinyMCE) != 'undefined'){
-        $("#id_description").tinymce().remove();
-        $("#id_short_description").tinymce().remove();
-        $("#id_short_text").tinymce().remove();
-        $("#id_body").tinymce().remove();
-        $("#id_html").tinymce().remove();
-        $("#id_note").tinymce().remove();
-    }
-    addEditor("#id_description");
-    addEditor("#id_short_description", false, '200');
-    addEditor("#id_short_text", false, '200');
-    addEditor("#id_body");
-    addEditor('#id_html');
-    addEditor('#id_note');
+        // not translated fields
+        $.each(TINYMCE_FIELD_IDS, function(idx, item){
+            $(item['id']).tinymce().remove();
+        });
+        addEditor(item['id'], item['hide_save'], item['height']);
+    });
 }
 
 

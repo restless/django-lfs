@@ -32,6 +32,8 @@ class CategoryAddForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(CategoryAddForm, self).__init__(*args, **kwargs)
         self.fields.keyOrder = prepare_fields_order(self, 'name', 'slug')
+        for field_name in self.fields.keyOrder:
+            self.fields[field_name].required = True
 
     class Meta:
         model = Category

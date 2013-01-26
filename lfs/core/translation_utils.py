@@ -4,6 +4,8 @@ from django.conf import settings
 try:
     from modeltranslation.utils import get_translation_fields, build_localized_fieldname
     from modeltranslation.manager import get_translatable_fields_for_model
+    from modeltranslation import settings as modeltranslation_settings
+    AVAILABLE_LANGUAGES = modeltranslation_settings.AVAILABLE_LANGUAGES
 except ImportError:
     def get_translation_fields(field):
         return [field]
@@ -13,6 +15,8 @@ except ImportError:
 
     def get_translatable_fields_for_model(cls):
         return {}
+
+    AVAILABLE_LANGUAGES = [language[0] for language in settings.LANGUAGES]
 
 
 def prepare_fields_order(form, *fields):
@@ -29,10 +33,7 @@ def get_languages_list():
     """ Returns language codes as list
         Don't use cache here as it locks itself!
     """
-    langs = getattr(settings, 'LANGUAGES_LIST', None)
-    if not langs:
-        langs = [language[0] for language in settings.LANGUAGES]
-    return langs
+    return AVAILABLE_LANGUAGES
 
 
 def get_default_language():

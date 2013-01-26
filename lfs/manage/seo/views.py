@@ -13,6 +13,7 @@ from django.conf.urls.defaults import patterns, url
 # lfs.imports
 from lfs.caching.utils import lfs_get_object_or_404
 from lfs.core.utils import LazyEncoder
+from lfs.core.translation_utils import get_translatable_fields_for_model
 
 from django.views.generic.base import View
 
@@ -43,8 +44,15 @@ class SEOView(View):
         form_k = form_klass if form_klass else self.form_klass
         if not form_k:
             # if form_klass is not specified then prepare default model form for SEO management
+
+            trans_dict = get_translatable_fields_for_model(model_klass)
+            fields = []
+            fields.extend(trans_dict.get('meta_title', ['meta_title']))
+            fields.extend(trans_dict.get('meta_keywords', ['meta_keywords']))
+            fields.extend(trans_dict.get('meta_description', ['meta_description']))
+
             form_k = modelform_factory(model_klass,
-                                       fields=("meta_title", "meta_keywords", "meta_description"))
+                                       fields=fields)
         self.form_klass = form_k
         self.model_klass = model_klass
         self.template_name = template_name
