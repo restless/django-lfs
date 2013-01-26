@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
+from django.forms.models import fields_for_model
 
 try:
     from modeltranslation.utils import get_translation_fields, build_localized_fieldname
@@ -22,10 +23,16 @@ except ImportError:
 def prepare_fields_order(form, *fields):
     """ return list of field names expanding it with translated field names if modeltranslation is in use
     """
+    trans_dict = get_translatable_fields_for_model(form.instance.__class__)
     out = []
-    for field in fields:
-        trans_dict = get_translatable_fields_for_model(form.instance.__class__)
-        out.extend(trans_dict.get(field, [field]))
+    if not fields:
+        fields = fields_for_model(form.instance).keys()
+        for key in trans_dict.keys():
+            fields.remove(key)
+        out = fields
+    else:
+        for field in fields:
+            out.extend(trans_dict.get(field, [field]))
     return out
 
 

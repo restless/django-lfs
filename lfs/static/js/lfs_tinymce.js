@@ -66,7 +66,9 @@ function update_editor() {
 
         // not translated fields
         $.each(TINYMCE_FIELD_IDS, function(idx, item){
-            $(item['id']).tinymce().remove();
+            if (typeof(tinyMCE) != 'undefined'){
+                $(item['id']).tinymce().remove();
+            }
         });
         addEditor(item['id'], item['hide_save'], item['height']);
     });
