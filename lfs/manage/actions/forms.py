@@ -10,7 +10,7 @@ class ActionForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(ActionForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = prepare_fields_order(self, 'active', 'title', 'link', 'group')
+        prepare_fields_order(self, fields=('active', 'title', 'link', 'group'))
 
     class Meta:
         model = Action
@@ -21,7 +21,7 @@ class ActionAddForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(ActionAddForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = prepare_fields_order(self, "title", "link", "group")
+        prepare_fields_order(self, fields=("title", "link", "group"))
 
     class Meta:
         model = Action

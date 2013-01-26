@@ -51,7 +51,7 @@ var TINYMCE_FIELD_IDS = [{id: "#id_description", hide_save: false, height: null}
                          {id: "#id_short_text", hide_save: false, height: '200'},
                          {id: "#id_body", hide_save: false, height: null},
                          {id: "#id_html", hide_save: false, height: null},
-                         {id: "#id_note", hide_save: false, height: null}];
+                         {id: "#id_note", hide_save: false, height: '100'}];
 
 function update_editor() {
     /* for each field first detach tinymce and then attach again */

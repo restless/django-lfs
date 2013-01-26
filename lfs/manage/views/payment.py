@@ -23,14 +23,18 @@ from lfs.customer.models import Customer
 from lfs.payment.models import PaymentMethod
 from lfs.payment.models import PaymentMethodPrice
 from lfs.payment import utils as payment_utils
+from lfs.core.translation_utils import prepare_fields_order
 
 
 class PaymentMethodAddForm(ModelForm):
     """Form to add a payment method.
     """
+    def __init__(self, *args, **kwargs):
+        super(PaymentMethodAddForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=('name', ))
+
     class Meta:
         model = PaymentMethod
-        fields = ("name", )
 
 
 class PaymentMethodForm(ModelForm):
@@ -39,10 +43,10 @@ class PaymentMethodForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(PaymentMethodForm, self).__init__(*args, **kwargs)
         self.fields["image"].widget = LFSImageInput()
+        prepare_fields_order(self, exclude=('deletable', 'priority'))
 
     class Meta:
         model = PaymentMethod
-        exclude = ("deletable", "priority")
 
 
 # Starting pages. This pages are called directly via a request

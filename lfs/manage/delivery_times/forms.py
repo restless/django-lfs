@@ -19,7 +19,7 @@ class DeliveryTimeForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(DeliveryTimeForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = prepare_fields_order(self)
+        prepare_fields_order(self)
 
     class Meta:
         model = DeliveryTime

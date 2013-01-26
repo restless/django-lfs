@@ -31,7 +31,7 @@ class CategoryAddForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(CategoryAddForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = prepare_fields_order(self, 'name', 'slug')
+        prepare_fields_order(self, fields=('name', 'slug'))
 
         # require slug fields
         for field_name in get_translation_fields('slug'):
@@ -54,8 +54,9 @@ class CategoryForm(ModelForm):
         except KeyError:
             context = None
 
-        self.fields.keyOrder = prepare_fields_order(self, "name", "slug", "short_description", "description", "short_description",
-                "exclude_from_navigation", "image", "static_block")
+        prepare_fields_order(self, fields=("name", "slug", "short_description", "description",
+                                                                  "short_description", "exclude_from_navigation",
+                                                                  "image", "static_block"))
 
         # require slug fields
         for field_name in get_translation_fields('slug'):

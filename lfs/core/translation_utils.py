@@ -20,19 +20,20 @@ except ImportError:
     AVAILABLE_LANGUAGES = [language[0] for language in settings.LANGUAGES]
 
 
-def prepare_fields_order(form, *fields):
+def prepare_fields_order(form, fields=None, exclude=None):
     """ return list of field names expanding it with translated field names if modeltranslation is in use
     """
     trans_dict = get_translatable_fields_for_model(form.instance.__class__)
     out = []
     if not fields:
-        fields = fields_for_model(form.instance).keys()
-        for key in trans_dict.keys():
-            fields.remove(key)
-        out = fields
+        out = fields_for_model(form.instance, exclude=exclude).keys()
+        if trans_dict:
+            for key in trans_dict.keys():
+                out.remove(key)
     else:
         for field in fields:
             out.extend(trans_dict.get(field, [field]))
+    form.fields.keyOrder = out
     return out
 
 
