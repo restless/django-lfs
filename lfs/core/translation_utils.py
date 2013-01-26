@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from django.forms.models import fields_for_model
+from django.core.urlresolvers import reverse
 
 try:
     from modeltranslation.utils import get_translation_fields, build_localized_fieldname
@@ -50,3 +51,9 @@ def get_default_language():
     except ImportError:
         DEFAULT_LANGUAGE = settings.LANGUAGE_CODE
     return DEFAULT_LANGUAGE
+
+
+def lfs_reverse(*args, **kwargs):
+    if not 'localeurl' in settings.INSTALLED_APPS:
+        del kwargs['locale']
+    return reverse(*args, **kwargs)

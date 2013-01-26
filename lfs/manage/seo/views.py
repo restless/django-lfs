@@ -47,6 +47,9 @@ class SEOView(View):
 
             trans_dict = get_translatable_fields_for_model(model_klass)
             fields = []
+            if not trans_dict:
+                trans_dict = {}
+
             fields.extend(trans_dict.get('meta_title', ['meta_title']))
             fields.extend(trans_dict.get('meta_keywords', ['meta_keywords']))
             fields.extend(trans_dict.get('meta_description', ['meta_description']))

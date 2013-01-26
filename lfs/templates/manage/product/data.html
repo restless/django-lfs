@@ -1,4 +1,4 @@
-{% load i18n lfs_tags %}
+{% load i18n lfs_tags lfs_modeltranslation_tags %}
 
 <h2>{% trans 'Data' %}</h2>
 
@@ -17,65 +17,76 @@
                 </div>
             </div>
 
-            <div class="field">
-                <div class="label">
-                    {% if product.is_variant %}
-                        {{ form.active_name }}
-                    {% endif %}
-                    {{ form.name.label_tag }}:
-                </div>
-
-                {% if form.name.errors %}
-                    <div class="error">
-                        {{ form.name }}
-                        {{ form.name.errors }}
-                    </div>
-                {% else %}
-                    <div>
-                        {{ form.name }}
+            {% translatedfields form "name" %}
+                <div class="field">
+                    <div class="label">
                         {% if product.is_variant %}
-                            {{ product.parent.name }}
+                            {% switchlanguage translation_language %}
+                                {{ form.active_name }}
+                            {% endswitchlanguage %}
                         {% endif %}
+                        {{ translated_field.label_tag }}:
                     </div>
-                {% endif %}
-            </div>
+
+                    {% if translated_field.errors %}
+                        <div class="error">
+                            {{ translated_field }}
+                            {{ translated_field.errors }}
+                        </div>
+                    {% else %}
+                        <div>
+                            {{ translated_field }}
+                            {% if product.is_variant %}
+                                {% switchlanguage translation_language %}
+                                    {{ product.parent.name }}
+                                {% endswitchlanguage %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endtranslatedfields %}
         </fieldset>
 
         <fieldset>
             <legend>{% trans "Urls" %}</legend>
 
-            <div class="field">
-                <div class="label">
-                    {{ form.slug.label_tag }}:
-                </div>
-
-                {% if form.slug.errors %}
-                    <div class="error">
-                        {{ form.slug }}
-                        {{ form.slug.errors }}
+            {% translatedfields form "slug" %}
+                <div class="field">
+                    <div class="label">
+                        {{ translated_field.label_tag }}:
                     </div>
-                {% else %}
+
+                    {% if translated_field.errors %}
+                        <div class="error">
+                            {{ translated_field }}
+                            {{ translated_field.errors }}
+                        </div>
+                    {% else %}
+                        <div>
+                            {{ translated_field }}
+                            {% if product.is_variant %}
+                                {% switchlanguage translation_language %}
+                                    {{ product.parent.slug }}
+                                {% endswitchlanguage %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endtranslatedfields %}
+
+            {% for redirect_dict in redirect_tos %}
+                <div class="field">
+                    <div class="label">
+                        {{ redirect_dict.label }}
+                    </div>
                     <div>
-                        {{ form.slug }}
-                        {% if product.is_variant %}
-                            {{ product.parent.slug }}
-                        {% endif %}
+                        <input type="text"
+                               id="{{ redirect_dict.id_name }}"
+                               name="{{ redirect_dict.id_name }}"
+                               value="{{ redirect_dict.value }}" />
                     </div>
-                {% endif %}
-            </div>
-
-            <div class="field">
-                <div class="label">
-                    {% trans "Redirect to" %}
                 </div>
-                <div>
-                    <input type="text"
-                           id="redirect_to"
-                           name="redirect_to"
-                           value="{{ redirect_to }}" />
-                </div>
-            </div>
-
+            {% endfor %}
         </fieldset>
 
         <fieldset>

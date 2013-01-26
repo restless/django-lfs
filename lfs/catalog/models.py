@@ -8,7 +8,6 @@ from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.cache import cache
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
@@ -16,6 +15,7 @@ from django.conf import settings
 # lfs imports
 import lfs.catalog.utils
 from lfs.core.fields.thumbs import ImageWithThumbsField
+from lfs.core.translation_utils import lfs_reverse
 from lfs.core.managers import ActiveManager
 from lfs.catalog.settings import CHOICES, CONTENT_CATEGORIES
 from lfs.catalog.settings import CHOICES_STANDARD
@@ -195,8 +195,7 @@ class Category(models.Model):
         """
         Returns the absolute_url.
         """
-        return ("lfs_category", (), {"slug": self.slug})
-    get_absolute_url = models.permalink(get_absolute_url)
+        return lfs_reverse('lfs_category', kwargs={"slug": self.slug})
 
     @property
     def content_type(self):
@@ -707,8 +706,7 @@ class Product(models.Model):
         """
         Returns the absolute url of the product.
         """
-        return ("lfs_product", (), {"slug": self.slug})
-    get_absolute_url = models.permalink(get_absolute_url)
+        return lfs_reverse('lfs_product', kwargs={"slug": self.slug})
 
     @property
     def content_type(self):
@@ -2304,7 +2302,7 @@ class File(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return reverse("lfs_file", kwargs={"id": self.id})
+        return lfs_reverse("lfs_file", kwargs={"id": self.id})
 
 
 class StaticBlock(models.Model):

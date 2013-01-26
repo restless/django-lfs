@@ -14,10 +14,11 @@ from django.shortcuts import render_to_response
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.utils import simplejson
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_POST
 from django.forms.widgets import HiddenInput
 from django.conf import settings
+from django.utils import translation
 
 # lfs imports
 import lfs.core.utils
@@ -39,6 +40,7 @@ from lfs.manage.utils import get_current_page
 from lfs.manage.seo.views import SEOView
 from lfs.manufacturer.models import Manufacturer
 from lfs.utils.widgets import SelectImage
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, get_languages_list
 
 
 # Forms
@@ -46,9 +48,15 @@ class ProductAddForm(forms.ModelForm):
     """
     Form to add a new product.
     """
+    def __init__(self, *args, **kwargs):
+        super(ProductAddForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=('name', 'slug'))
+        # require slug fields
+        for field_name in get_translation_fields('slug'):
+            self.fields[field_name].required = True
+
     class Meta:
         model = Product
-        fields = ("name", "slug")
 
 
 class ProductSubTypeForm(forms.ModelForm):
@@ -75,22 +83,38 @@ class ProductDataForm(forms.ModelForm):
         man_count = Manufacturer.objects.count()
         if man_count > getattr(settings, 'LFS_SELECT_LIMIT', 20):
             self.fields["manufacturer"].widget = HiddenInput()
+        prepare_fields_order(self, fields=("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
+                    "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
+                    "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
+                    "active_base_price", "base_price_unit", "base_price_amount"))
+        # require slug fields
+        for field_name in get_translation_fields('slug'):
+            self.fields[field_name].required = True
 
     class Meta:
         model = Product
-        fields = ("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
-            "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
-            "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
-            "active_base_price", "base_price_unit", "base_price_amount")
 
     def clean(self):
         super(ProductDataForm, self).clean()
         if self.instance:
-            redirect_to = self.data.get("redirect_to", "")
-            if redirect_to != "":
-                lfs.core.utils.set_redirect_for(self.instance.get_absolute_url(), redirect_to)
+            langs = get_languages_list()
+            if len(langs) == 1:
+                redirect_to = self.data.get("redirect_to", "")
+                if redirect_to != "":
+                    lfs.core.utils.set_redirect_for(self.instance.get_absolute_url(), redirect_to)
+                else:
+                    lfs.core.utils.remove_redirect_for(self.instance.get_absolute_url())
             else:
-                lfs.core.utils.remove_redirect_for(self.instance.get_absolute_url())
+                current_language = translation.get_language()
+                for lang in langs:
+                    translation.activate(lang)
+                    abs_url = self.instance.get_absolute_url()
+                    translation.activate(current_language)
+                    redirect_to = self.data.get("redirect_to_%s" % lang, "")
+                    if redirect_to != "":
+                        lfs.core.utils.set_redirect_for(abs_url, redirect_to)
+                    else:
+                        lfs.core.utils.remove_redirect_for(abs_url)
 
         if self.data.get("active_base_price", 0):
             if self.data.get("base_price_amount", "") == "":
@@ -118,11 +142,24 @@ class VariantDataForm(forms.ModelForm):
 
     def clean(self):
         if self.instance:
-            redirect_to = self.data.get("redirect_to", "")
-            if redirect_to != "":
-                lfs.core.utils.set_redirect_for(self.instance.get_absolute_url(), redirect_to)
+            langs = get_languages_list()
+            if len(langs) == 1:
+                redirect_to = self.data.get("redirect_to", "")
+                if redirect_to != "":
+                    lfs.core.utils.set_redirect_for(self.instance.get_absolute_url(), redirect_to)
+                else:
+                    lfs.core.utils.remove_redirect_for(self.instance.get_absolute_url())
             else:
-                lfs.core.utils.remove_redirect_for(self.instance.get_absolute_url())
+                current_language = translation.get_language()
+                for lang in langs:
+                    translation.activate(lang)
+                    abs_url = self.instance.get_absolute_url()
+                    translation.activate(current_language)
+                    redirect_to = self.data.get("redirect_to_%s" % lang, "")
+                    if redirect_to != "":
+                        lfs.core.utils.set_redirect_for(abs_url, redirect_to)
+                    else:
+                        lfs.core.utils.remove_redirect_for(abs_url)
 
         if self.data.get("active_base_price") == str(CHOICES_YES):
             if self.data.get("base_price_amount", "") == "":
@@ -243,6 +280,24 @@ def stock(request, product_id, template_name="manage/product/stock.html"):
         return result
 
 
+def prepare_redirect_tos(product):
+    redirect_tos = []
+    langs = get_languages_list()
+    if len(langs) == 1:
+        redirect_tos.append({'label': _('Redirect to'),
+                             'id_name': 'redirect_to',
+                             'value': lfs.core.utils.get_redirect_for(product.get_absolute_url())})
+    else:
+        current_language = translation.get_language()
+        for lang in langs:
+            translation.activate(lang)
+            value = lfs.core.utils.get_redirect_for(product.get_absolute_url())
+            translation.activate(current_language)
+            redirect_tos.append({'label': '%s [%s]' % (_('Redirect to'), lang),
+                                 'id_name': 'redirect_to_%s' % lang,
+                                 'value': value})
+    return redirect_tos
+
 @permission_required("core.manage_shop")
 def product_data_form(request, product_id, template_name="manage/product/data.html"):
     """
@@ -255,10 +310,12 @@ def product_data_form(request, product_id, template_name="manage/product/data.ht
     else:
         form = ProductDataForm(instance=product)
 
+    redirect_tos = prepare_redirect_tos(product)
+
     return render_to_string(template_name, RequestContext(request, {
         "product": product,
         "form": form,
-        "redirect_to": lfs.core.utils.get_redirect_for(product.get_absolute_url()),
+        "redirect_tos": redirect_tos,
     }))
 
 
@@ -443,7 +500,7 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
     form_html = render_to_string(template_name, RequestContext(request, {
         "product": product,
         "form": form,
-        "redirect_to": lfs.core.utils.get_redirect_for(product.get_absolute_url()),
+        "redirect_tos": prepare_redirect_tos(product),
     }))
 
     html = [

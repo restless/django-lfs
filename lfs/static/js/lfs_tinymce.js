@@ -58,18 +58,22 @@ function update_editor() {
     $.each(TINYMCE_FIELD_IDS, function(idx, item){
         // translated fields
         $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
-            if (typeof(tinyMCE) != 'undefined'){
-                $(item['id'] + "_" + lang).tinymce().remove();
+            var obj = $(item['id'] + "_" + lang);
+            if (obj.length > 0){
+                if (typeof(tinyMCE) != 'undefined'){
+                    obj.tinymce().remove();
+                }
+                addEditor(item['id'] + "_" + lang, item['hide_save'], item['height']);
             }
-            addEditor(item['id'] + "_" + lang, item['hide_save'], item['height']);
         });
 
         // not translated fields
-        $.each(TINYMCE_FIELD_IDS, function(idx, item){
-            if (typeof(tinyMCE) != 'undefined'){
-                $(item['id']).tinymce().remove();
+        if (typeof(tinyMCE) != 'undefined'){
+            var obj = $(item['id']);
+            if (obj.length > 0){
+                obj.tinymce().remove();
             }
-        });
+        }
         addEditor(item['id'], item['hide_save'], item['height']);
     });
 }
