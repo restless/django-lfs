@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from django.forms.models import fields_for_model
-from django.core.urlresolvers import reverse
+
+try:
+    from localeurl.models import reverse
+except ImportError:
+    from django.core.urlresolvers import reverse
 
 try:
     from modeltranslation.utils import get_translation_fields, build_localized_fieldname

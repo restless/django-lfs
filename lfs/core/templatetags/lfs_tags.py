@@ -34,6 +34,7 @@ from lfs.core.models import Action
 from lfs.page.models import Page
 from lfs.shipping import utils as shipping_utils
 from lfs.manufacturer.models import Manufacturer
+from lfs.core.translation_utils import build_localized_fieldname
 
 logger = logging.getLogger("default")
 register = template.Library()
@@ -271,7 +272,9 @@ def product_navigation(context, product):
         products = products.filter(active=True)
     products = products.exclude(sub_type=VARIANT).distinct().order_by(sorting)
 
-    product_slugs = list(products.values_list('slug', flat=True))
+    slug_name = build_localized_fieldname('slug', request.LANGUAGE_CODE)
+
+    product_slugs = list(products.values_list(slug_name, flat=True))
     product_index = product_slugs.index(slug)
 
     if product_index > 0:
