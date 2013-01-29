@@ -298,6 +298,7 @@ def prepare_redirect_tos(product):
                                  'value': value})
     return redirect_tos
 
+
 @permission_required("core.manage_shop")
 def product_data_form(request, product_id, template_name="manage/product/data.html"):
     """
