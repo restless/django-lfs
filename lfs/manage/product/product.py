@@ -343,9 +343,13 @@ def products_inline(request, page, paginator, template_name="manage/product/prod
     """
     Displays the list of products.
     """
+    uses_translations = False
+    if 'modeltranslation' in settings.INSTALLED_APPS and len(get_languages_list()) > 1:
+        uses_translations = True
     return render_to_string(template_name, RequestContext(request, {
         "page": page,
         "paginator": paginator,
+        "uses_translations": uses_translations
     }))
 
 
@@ -568,6 +572,10 @@ def save_products(request):
     paginator = Paginator(products, 25)
     page = paginator.page(request.REQUEST.get("page", 1))
 
+    uses_translations = False
+    if 'modeltranslation' in settings.INSTALLED_APPS and len(get_languages_list()) > 1:
+        uses_translations = True
+
     if request.POST.get("action") == "delete":
         for key, value in request.POST.items():
             if key.startswith("delete-"):
@@ -590,10 +598,10 @@ def save_products(request):
                     product = Product.objects.get(pk=id)
                 except Product.DoesNotExist:
                     continue
-
-                product.name = request.POST.get("name-%s" % id, "")
+                if not uses_translations:
+                    product.name = request.POST.get("name-%s" % id, "")
+                    product.slug = request.POST.get("slug-%s" % id, "")
                 product.sku = request.POST.get("sku-%s" % id, "")
-                product.slug = request.POST.get("slug-%s" % id, "")
                 product.sub_type = request.POST.get("sub_type-%s" % id, 0)
 
                 try:

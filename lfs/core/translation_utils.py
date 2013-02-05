@@ -7,22 +7,26 @@ try:
 except ImportError:
     from django.core.urlresolvers import reverse
 
-try:
-    from modeltranslation.utils import get_translation_fields, build_localized_fieldname
-    from modeltranslation.manager import get_translatable_fields_for_model
-    from modeltranslation import settings as modeltranslation_settings
-    AVAILABLE_LANGUAGES = modeltranslation_settings.AVAILABLE_LANGUAGES
-except ImportError:
-    def get_translation_fields(field):
-        return [field]
 
-    def build_localized_fieldname(field, l):
-        return field
+def get_translation_fields(field):
+    return [field]
 
-    def get_translatable_fields_for_model(cls):
-        return {}
+def build_localized_fieldname(field, l):
+    return field
 
-    AVAILABLE_LANGUAGES = [language[0] for language in settings.LANGUAGES]
+def get_translatable_fields_for_model(cls):
+    return {}
+
+AVAILABLE_LANGUAGES = [language[0] for language in settings.LANGUAGES]
+
+if 'modeltranslation' in settings.INSTALLED_APPS:
+    try:
+        from modeltranslation.utils import get_translation_fields, build_localized_fieldname
+        from modeltranslation.manager import get_translatable_fields_for_model
+        from modeltranslation import settings as modeltranslation_settings
+        AVAILABLE_LANGUAGES = modeltranslation_settings.AVAILABLE_LANGUAGES
+    except ImportError:
+        pass
 
 
 def prepare_fields_order(form, fields=None, exclude=None):
@@ -36,8 +40,11 @@ def prepare_fields_order(form, fields=None, exclude=None):
             for key in trans_dict.keys():
                 out.remove(key)
     else:
-        for field in fields:
-            out.extend(trans_dict.get(field, [field]))
+        if trans_dict:
+            for field in fields:
+                out.extend(trans_dict.get(field, [field]))
+        else:
+            out.extend(fields)
     form.fields.keyOrder = out
     return out
 
@@ -46,7 +53,9 @@ def get_languages_list():
     """ Returns language codes as list
         Don't use cache here as it locks itself!
     """
-    return AVAILABLE_LANGUAGES
+    if 'modeltranslation' in settings.INSTALLED_APPS:
+        return AVAILABLE_LANGUAGES
+    return [settings.LANGUAGE_CODE]
 
 
 def get_default_language():

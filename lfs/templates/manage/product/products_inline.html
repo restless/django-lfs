@@ -56,16 +56,24 @@
                                class="select-delete" />
                     </td>
                     <td>
-                        <input type="text"
-                               size="20"
-                               name="name-{{ product.id }}"
-                               value="{{ product.name }}" />
+                        {% if not uses_translations %}
+                            <input type="text"
+                                   size="20"
+                                   name="name-{{ product.id }}"
+                                   value="{{ product.name }}" />
+                        {% else %}
+                            {{ product.name }}
+                        {% endif %}
                     </td>
                     <td>
-                        <input type="text"
-                               size="20"
-                               name="slug-{{ product.id }}"
-                               value="{{ product.slug }}" />
+                        {% if not uses_translations %}
+                            <input type="text"
+                                   size="20"
+                                   name="slug-{{ product.id }}"
+                                   value="{{ product.slug }}" />
+                        {% else %}
+                            {{ product.slug }}
+                        {% endif %}
                     </td>
                     <td>
                         <input type="text"
