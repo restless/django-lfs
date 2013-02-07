@@ -52,7 +52,7 @@ class ManufacturersTestCase(TestCase):
         self.p1.save()
 
         # direct visit
-        url = reverse("lfs_product", kwargs={'slug': self.p1.slug})
+        url = self.p1.get_absolute_url()
         response = self.client.get(url)
         self.assertContains(response, self.c1.name)
 
@@ -61,17 +61,15 @@ class ManufacturersTestCase(TestCase):
         url = reverse("lfs_manufacturer", kwargs={'slug': self.m1.slug})
         self.client.get(url)
         # then visit the product
-        url = reverse("lfs_product", kwargs={'slug': self.p1.slug})
+        url = self.p1.get_absolute_url()
         response = self.client.get(url)
         self.assertContains(response, self.m1.name)
 
         # visit from the category's page - resets manufacturer
         # first go to category page
-        url = reverse("lfs_category", kwargs={'slug': self.c1.slug})
-        self.client.get(url)
+        self.client.get(self.c1.get_absolute_url())
         # then visit the product
-        url = reverse("lfs_product", kwargs={'slug': self.p1.slug})
-        response = self.client.get(url)
+        response = self.client.get(self.p1.get_absolute_url())
         self.assertContains(response, self.c1.name)
 
 

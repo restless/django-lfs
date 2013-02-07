@@ -2,7 +2,7 @@
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.forms import ModelForm
+from django.forms import ModelForm, ValidationError
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
@@ -23,44 +23,71 @@ from lfs.manage.categories.view import category_view
 from lfs.manage.categories.portlet import manage_categories_portlet
 from lfs.manage.seo.views import SEOView
 from lfs.manage.views.lfs_portlets import portlets_inline
-from lfs.core.translation_utils import prepare_fields_order, get_translation_fields
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation, \
+    AVAILABLE_LANGUAGES, build_localized_fieldname
 
 
 class CategoryAddForm(ModelForm):
     """Process form to add a category.
     """
     def __init__(self, *args, **kwargs):
-        super(CategoryAddForm, self).__init__(*args, **kwargs)
-        prepare_fields_order(self, fields=('name', 'slug'))
+        # get fields from kwargs as we're using this form as a base for edit form too
+        fields = ('name', 'slug')
+        if 'fields' in kwargs:
+            fields = kwargs.get('fields')
+            del kwargs['fields']
 
-        # require slug fields
-        for field_name in get_translation_fields('slug'):
-            self.fields[field_name].required = True
+        super(CategoryAddForm, self).__init__(*args, **kwargs)
+
+        prepare_fields_order(self, fields=fields)
+        if not uses_modeltranslation():
+            # require slug field
+            self.fields['slug'].required = True
+
+    def clean(self):
+        """ If translations are used then at least one name and one slug are required
+        """
+        cleaned_data = super(CategoryAddForm, self).clean()
+        slug_fields = get_translation_fields('slug')
+
+        # at least one name and one slug has to be defined
+        if uses_modeltranslation():
+            name_fields = get_translation_fields('name')
+
+            values = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+            values.extend([self.cleaned_data.get(trans_name, '') for trans_name in slug_fields])
+
+            if not any(values):
+                raise ValidationError(_('At least one name and one slug fields have to be filled'))
+
+        # check for uniqueness
+        for fname in slug_fields:
+            val = self.cleaned_data.get(fname).strip()
+            if val:
+                qs = self._meta.model.objects.filter(**{fname: val})
+                if self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    msg = _(u"Slug '%s' already exists!") % val
+                    self._errors[fname] = self.error_class([msg])
+                    del cleaned_data[fname]
+
+        return cleaned_data
 
     class Meta:
         model = Category
 
 
-class CategoryForm(ModelForm):
+class CategoryForm(CategoryAddForm):
     """Process form to edit a category.
     """
     def __init__(self, *args, **kwargs):
+        fields = ("name", "slug", "short_description", "description",
+                  "exclude_from_navigation", "image", "static_block")
+        kwargs['fields'] = fields
         super(CategoryForm, self).__init__(*args, **kwargs)
         for fname in get_translation_fields("image"):
             self.fields[fname].widget = LFSImageInput()
-
-        try:
-            context = kwargs["instance"]
-        except KeyError:
-            context = None
-
-        prepare_fields_order(self, fields=("name", "slug", "short_description", "description",
-                                                                  "short_description", "exclude_from_navigation",
-                                                                  "image", "static_block"))
-
-        # require slug fields
-        for field_name in get_translation_fields('slug'):
-            self.fields[field_name].required = True
 
     class Meta:
         model = Category
@@ -124,8 +151,7 @@ def category_by_id(request, category_id):
     products are displayed by slug, for the manager by id).
     """
     category = Category.objects.get(pk=category_id)
-    url = reverse("lfs_category", kwargs={"slug": category.slug})
-    return HttpResponseRedirect(url)
+    return HttpResponseRedirect(category.get_absolute_url())
 
 
 # Actions

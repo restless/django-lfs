@@ -463,13 +463,13 @@ class PropertiesTestCase(TestCase):
     def test_set_filter_1(self):
         """Tests the setting of a filter via request/view
         """
-        url = reverse("lfs_set_product_filter", kwargs={"category_slug": self.c1.slug, "property_id": 1, "value": "Red"})
+        url = reverse("lfs_set_product_filter", kwargs={"category_id": self.c1.pk, "property_id": 1, "value": "Red"})
         response = self.client.get(url)
 
         pf = self.client.session.get("product-filter", {})
         self.assertEqual(pf["1"], "Red")
 
-        url = reverse("lfs_set_product_filter", kwargs={"category_slug": self.c1.slug, "property_id": 2, "value": "M"})
+        url = reverse("lfs_set_product_filter", kwargs={"category_id": self.c1.pk, "property_id": 2, "value": "M"})
         response = self.client.get(url)
 
         pf = self.client.session.get("product-filter", {})
@@ -479,13 +479,13 @@ class PropertiesTestCase(TestCase):
     def test_set_filter_2(self):
         """Tests the setting of a filter with min/max via request/view
         """
-        url = reverse("lfs_set_product_filter", kwargs={"category_slug": self.c1.slug, "property_id": 1, "min": "10", "max": "20"})
+        url = reverse("lfs_set_product_filter", kwargs={"category_id": self.c1.pk, "property_id": 1, "min": "10", "max": "20"})
         response = self.client.get(url)
 
         pf = self.client.session.get("product-filter", {})
         self.assertEqual(pf["1"], ("10", "20"))
 
-        url = reverse("lfs_set_product_filter", kwargs={"category_slug": self.c1.slug, "property_id": 2, "value": "M"})
+        url = reverse("lfs_set_product_filter", kwargs={"category_id": self.c1.pk, "property_id": 2, "value": "M"})
         response = self.client.get(url)
 
         pf = self.client.session.get("product-filter", {})
@@ -1172,7 +1172,7 @@ class ViewsTestCase(TestCase):
         """Tests whether the right template is used for products and sub
         category view of a category.
         """
-        url = reverse("lfs_category", kwargs={"slug": "category-1"})
+        url = reverse("lfs_category", kwargs={"slug": "category-1", "category_id": 1})
         response = self.client.get(url, {'sorting': ''})
         templates = [t.name for t in response.template]
 
@@ -1211,7 +1211,7 @@ class ViewsTestCase(TestCase):
         """
         Tests that we can view the product detail page
         """
-        url = reverse("lfs_product", kwargs={"slug": "product-1"})
+        url = reverse("lfs_product", kwargs={"slug": "product-1", "product_id": 1})
 
         response = self.client.get(url)
 

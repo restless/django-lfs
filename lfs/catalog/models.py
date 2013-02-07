@@ -156,7 +156,7 @@ class Category(models.Model):
        Sets the template which renders the category view. If left to None, default template is used.
     """
     name = models.CharField(_(u"Name"), max_length=50)
-    slug = models.SlugField(_(u"Slug"), unique=True)
+    slug = models.SlugField(_(u"Slug"))
     parent = models.ForeignKey("self", verbose_name=_(u"Parent"), blank=True, null=True)
 
     # If selected it shows products of the sub categories within the product
@@ -197,7 +197,7 @@ class Category(models.Model):
         """
         Returns the absolute_url.
         """
-        return lfs_reverse('lfs_category', kwargs={"slug": self.slug})
+        return lfs_reverse('lfs_category', kwargs={"slug": self.slug, "category_id": self.pk})
 
     @property
     def content_type(self):
@@ -584,7 +584,7 @@ class Product(models.Model):
     """
     # All products
     name = models.CharField(_(u"Name"), help_text=_(u"The name of the product."), max_length=80, blank=True)
-    slug = models.SlugField(_(u"Slug"), help_text=_(u"The unique last part of the Product's URL."), unique=True, max_length=80)
+    slug = models.SlugField(_(u"Slug"), help_text=_(u"The unique last part of the Product's URL."), max_length=80)
     sku = models.CharField(_(u"SKU"), help_text=_(u"Your unique article number of the product."), blank=True, max_length=30)
     price = models.FloatField(_(u"Price"), default=0.0)
     price_calculator = models.CharField(_(u"Price calculator"), null=True, blank=True,
@@ -708,7 +708,9 @@ class Product(models.Model):
         """
         Returns the absolute url of the product.
         """
-        return lfs_reverse('lfs_product', kwargs={"slug": self.slug})
+        print 'w get'
+        print lfs_reverse('lfs_product', kwargs={"slug": self.slug, 'product_id': self.pk})
+        return lfs_reverse('lfs_product', kwargs={"slug": self.slug, 'product_id': self.pk})
 
     @property
     def content_type(self):

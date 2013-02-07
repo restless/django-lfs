@@ -179,7 +179,7 @@ def select_variant_from_properties(request):
     return HttpResponse(result)
 
 
-def set_filter(request, category_slug, property_id, value=None, min=None, max=None):
+def set_filter(request, category_id, property_id, value=None, min=None, max=None):
     """Saves the given filter to session. Redirects to the category with given
     slug.
     """
@@ -192,11 +192,11 @@ def set_filter(request, category_slug, property_id, value=None, min=None, max=No
 
     request.session["product-filter"] = product_filter
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
+    url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)
 
 
-def set_price_filter(request, category_slug):
+def set_price_filter(request, category_id):
     """Saves the given price filter to session. Redirects to the category with
     given slug.
     """
@@ -215,21 +215,21 @@ def set_price_filter(request, category_slug):
 
     request.session["price-filter"] = {"min": min, "max": max}
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
+    url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)
 
 
-def reset_price_filter(request, category_slug):
+def reset_price_filter(request, category_id):
     """Resets the price filter. Redirects to the category with given slug.
     """
     if "price-filter" in request.session:
         del request.session["price-filter"]
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
+    url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)
 
 
-def reset_filter(request, category_slug, property_id):
+def reset_filter(request, category_id, property_id):
     """Resets product filter with given property id. Redirects to the category
     with given slug.
     """
@@ -238,11 +238,11 @@ def reset_filter(request, category_slug, property_id):
             del request.session["product-filter"][property_id]
             request.session["product-filter"] = request.session["product-filter"]
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
+    url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)
 
 
-def reset_all_filter(request, category_slug):
+def reset_all_filter(request, category_id):
     """Resets all product filter. Redirects to the category with given slug.
     """
     if "product-filter" in request.session:
@@ -251,7 +251,7 @@ def reset_all_filter(request, category_slug):
     if "price-filter" in request.session:
         del request.session["price-filter"]
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
+    url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)
 
 
@@ -268,15 +268,19 @@ def set_sorting(request):
     return HttpResponseRedirect(request.META.get("HTTP_REFERER"))
 
 
-def category_view(request, slug, template_name="lfs/catalog/category_base.html"):
+def category_view(request, slug, category_id, template_name="lfs/catalog/category_base.html"):
     """
     """
     start = request.REQUEST.get("start", 1)
-    category = lfs_get_object_or_404(Category, slug=slug)
+    category = lfs_get_object_or_404(Category, id=category_id)
+
+    if category.slug != slug:
+        return HttpResponseRedirect(category.get_absolute_url())
+
     if category.get_content() == CONTENT_PRODUCTS:
-        inline = category_products(request, slug, start)
+        inline = category_products(request, category_id, start)
     else:
-        inline = category_categories(request, slug)
+        inline = category_categories(request, category_id)
     # Set last visited category for later use, e.g. Display breadcrumbs,
     # selected menu points, etc.
     request.session["last_category"] = category
@@ -293,7 +297,7 @@ def category_view(request, slug, template_name="lfs/catalog/category_base.html")
     }))
 
 
-def category_categories(request, slug, start=0, template_name="lfs/catalog/categories/category/default.html"):
+def category_categories(request, category_id, start=0, template_name="lfs/catalog/categories/category/default.html"):
     """Displays the child categories of the category with passed slug.
 
     This view is called if the user chooses a template that is situated in settings.CATEGORY_PATH ".
@@ -304,7 +308,7 @@ def category_categories(request, slug, start=0, template_name="lfs/catalog/categ
     if result is not None:
         return result
 
-    category = lfs_get_object_or_404(Category, slug=slug)
+    category = lfs_get_object_or_404(Category, id=category_id)
 
     format_info = category.get_format_info()
     amount_of_cols = format_info["category_cols"]
@@ -321,7 +325,7 @@ def category_categories(request, slug, start=0, template_name="lfs/catalog/categ
         categories.append(row)
     render_template = category.get_template_name()
 
-    if render_template != None:
+    if render_template is not None:
         template_name = render_template
 
     result = render_to_string(template_name, RequestContext(request, {
@@ -333,7 +337,7 @@ def category_categories(request, slug, start=0, template_name="lfs/catalog/categ
     return result
 
 
-def category_products(request, slug, start=1, template_name="lfs/catalog/categories/product/default.html"):
+def category_products(request, category_id, start=1, template_name="lfs/catalog/categories/product/default.html"):
     """Displays the products of the category with passed slug.
 
     This view is called if the user chooses a template that is situated in settings.PRODUCT_PATH ".
@@ -341,7 +345,7 @@ def category_products(request, slug, start=1, template_name="lfs/catalog/categor
     # Resets the product filters if the user navigates to another category.
     # TODO: Is this what a customer would expect?
     last_category = request.session.get("last_category")
-    if (last_category is None) or (last_category.slug != slug):
+    if (last_category is None) or (last_category.pk != category_id):
         if "product-filter" in request.session:
             del request.session["product-filter"]
         if "price-filter" in request.session:
@@ -356,7 +360,7 @@ def category_products(request, slug, start=1, template_name="lfs/catalog/categor
     product_filter = request.session.get("product-filter", {})
     product_filter = product_filter.items()
 
-    cache_key = "%s-category-products-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, slug)
+    cache_key = "%s-category-products-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, category_id)
     sub_cache_key = "%s-start-%s-sorting-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, start, sorting)
 
     filter_key = ["%s-%s" % (i[0], i[1]) for i in product_filter]
@@ -376,7 +380,7 @@ def category_products(request, slug, start=1, template_name="lfs/catalog/categor
     else:
         temp = dict()
 
-    category = lfs_get_object_or_404(Category, slug=slug)
+    category = lfs_get_object_or_404(Category, id=category_id)
 
     # Calculates parameters for display.
     try:
@@ -438,7 +442,7 @@ def category_products(request, slug, start=1, template_name="lfs/catalog/categor
                                               amount_of_products) % {'count': amount_of_products}
 
     render_template = category.get_template_name()
-    if render_template != None:
+    if render_template is not None:
         template_name = render_template
 
     result = render_to_string(template_name, RequestContext(request, {
@@ -454,19 +458,22 @@ def category_products(request, slug, start=1, template_name="lfs/catalog/categor
     return result
 
 
-def product_view(request, slug, template_name="lfs/catalog/product_base.html"):
+def product_view(request, slug, product_id, template_name="lfs/catalog/product_base.html"):
     """Main view to display a product.
     """
-    product = lfs_get_object_or_404(Product, slug=slug)
+    product = lfs_get_object_or_404(Product, pk=product_id)
+
+    if product.slug != slug:
+        return HttpResponseRedirect(product.get_absolute_url())
 
     if (request.user.is_superuser or product.is_active()) == False:
         raise Http404()
 
     # Store recent products for later use
     recent = request.session.get("RECENT_PRODUCTS", [])
-    if slug in recent:
-        recent.remove(slug)
-    recent.insert(0, slug)
+    if product_id in recent:
+        recent.remove(product_id)
+    recent.insert(0, product_id)
     if len(recent) > settings.LFS_RECENT_PRODUCTS_LIMIT:
         recent = recent[:settings.LFS_RECENT_PRODUCTS_LIMIT + 1]
     request.session["RECENT_PRODUCTS"] = recent

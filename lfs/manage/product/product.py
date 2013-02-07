@@ -40,7 +40,8 @@ from lfs.manage.utils import get_current_page
 from lfs.manage.seo.views import SEOView
 from lfs.manufacturer.models import Manufacturer
 from lfs.utils.widgets import SelectImage
-from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, get_languages_list
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, get_languages_list, \
+                                       uses_modeltranslation
 
 
 # Forms
@@ -49,11 +50,48 @@ class ProductAddForm(forms.ModelForm):
     Form to add a new product.
     """
     def __init__(self, *args, **kwargs):
+        # get fields from kwargs as we're using this form as a base for edit form too
+        fields = ('name', 'slug')
+        if 'fields' in kwargs:
+            fields = kwargs.get('fields')
+            del kwargs['fields']
+
         super(ProductAddForm, self).__init__(*args, **kwargs)
-        prepare_fields_order(self, fields=('name', 'slug'))
-        # require slug fields
-        for field_name in get_translation_fields('slug'):
-            self.fields[field_name].required = True
+
+        prepare_fields_order(self, fields=fields)
+        if not uses_modeltranslation():
+            # require slug field
+            self.fields['slug'].required = True
+
+    def clean(self):
+        """ If translations are used then at least one name and one slug are required
+        """
+        cleaned_data = super(ProductAddForm, self).clean()
+        slug_fields = get_translation_fields('slug')
+
+        # at least one name and one slug has to be defined
+        if uses_modeltranslation():
+            name_fields = get_translation_fields('name')
+
+            values = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+            values.extend([self.cleaned_data.get(trans_name, '') for trans_name in slug_fields])
+
+            if not any(values):
+                raise forms.ValidationError(_('At least one name and one slug fields have to be filled'))
+
+        # check for uniqueness
+        for fname in slug_fields:
+            val = self.cleaned_data.get(fname).strip()
+            if val:
+                qs = self._meta.model.objects.filter(**{fname: val})
+                if self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    msg = _(u"Slug '%s' already exists!") % val
+                    self._errors[fname] = self.error_class([msg])
+                    del cleaned_data[fname]
+
+        return cleaned_data
 
     class Meta:
         model = Product
@@ -72,24 +110,22 @@ class ProductSubTypeForm(forms.ModelForm):
         self.fields["sub_type"].choices = PRODUCT_TYPE_FORM_CHOICES
 
 
-class ProductDataForm(forms.ModelForm):
+class ProductDataForm(ProductAddForm):
     """
     Form to add and edit master data of a product.
     """
     def __init__(self, *args, **kwargs):
+        fields = ("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
+                  "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
+                  "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
+                  "active_base_price", "base_price_unit", "base_price_amount")
+        kwargs['fields'] = fields
         super(ProductDataForm, self).__init__(*args, **kwargs)
         self.fields["template"].widget = SelectImage(choices=PRODUCT_TEMPLATES)
         self.fields["active_base_price"].widget = CheckboxInput(check_test=lambda v:v!=0)
         man_count = Manufacturer.objects.count()
         if man_count > getattr(settings, 'LFS_SELECT_LIMIT', 20):
             self.fields["manufacturer"].widget = HiddenInput()
-        prepare_fields_order(self, fields=("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
-                    "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
-                    "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
-                    "active_base_price", "base_price_unit", "base_price_amount"))
-        # require slug fields
-        for field_name in get_translation_fields('slug'):
-            self.fields[field_name].required = True
 
     class Meta:
         model = Product
@@ -344,7 +380,7 @@ def products_inline(request, page, paginator, template_name="manage/product/prod
     Displays the list of products.
     """
     uses_translations = False
-    if 'modeltranslation' in settings.INSTALLED_APPS and len(get_languages_list()) > 1:
+    if uses_modeltranslation() and len(get_languages_list()) > 1:
         uses_translations = True
     return render_to_string(template_name, RequestContext(request, {
         "page": page,
@@ -573,7 +609,7 @@ def save_products(request):
     page = paginator.page(request.REQUEST.get("page", 1))
 
     uses_translations = False
-    if 'modeltranslation' in settings.INSTALLED_APPS and len(get_languages_list()) > 1:
+    if uses_modeltranslation() and len(get_languages_list()) > 1:
         uses_translations = True
 
     if request.POST.get("action") == "delete":
@@ -753,8 +789,7 @@ def product_by_id(request, product_id):
     products are displayed by slug, for the manager by id).
     """
     product = Product.objects.get(pk=product_id)
-    url = reverse("lfs_product", kwargs={"slug": product.slug})
-    return HttpResponseRedirect(url)
+    return HttpResponseRedirect(product.get_absolute_url())
 
 
 # Private Methods

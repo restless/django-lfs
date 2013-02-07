@@ -220,8 +220,6 @@ def product_navigation(context, product):
     request = context.get("request")
     sorting = request.session.get("sorting", 'price')
 
-    slug = product.slug
-
     # To calculate the position we take only STANDARD_PRODUCT into account.
     # That means if the current product is a VARIANT we switch to its parent
     # product.
@@ -239,7 +237,7 @@ def product_navigation(context, product):
     if lm and product.manufacturer == lm:
         cache_key = "%s-%s-product-navigation-manufacturer-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                                   pn_cache_key,
-                                                                  slug)
+                                                                  product.pk)
         res = cache.get(cache_key)
         if res and sorting in res:
             return res[sorting]
@@ -252,7 +250,7 @@ def product_navigation(context, product):
         else:
             cache_key = "%s-%s-product-navigation-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                          pn_cache_key,
-                                                         slug)
+                                                         product.pk)
             res = cache.get(cache_key)
             if res and sorting in res:
                 return res[sorting]
@@ -272,19 +270,17 @@ def product_navigation(context, product):
         products = products.filter(active=True)
     products = products.exclude(sub_type=VARIANT).distinct().order_by(sorting)
 
-    slug_name = build_localized_fieldname('slug', request.LANGUAGE_CODE)
-
-    product_slugs = list(products.values_list(slug_name, flat=True))
-    product_index = product_slugs.index(slug)
+    product_ids = list(products.values_list('pk', flat=True))
+    product_index = product_ids.index(product.pk)
 
     if product_index > 0:
-        previous = product_slugs[product_index - 1]
+        previous = Product.objects.get(pk=product_ids[product_index - 1])
     else:
         previous = None
 
-    total = len(product_slugs)
+    total = len(product_ids)
     if product_index < total - 1:
-        next = product_slugs[product_index + 1]
+        next = Product.objects.get(pk=product_ids[product_index + 1])
     else:
         next = None
 
