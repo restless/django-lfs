@@ -861,3 +861,15 @@ div.lfs-pagination a:hover{
     border-bottom: 1px solid #222222;
     color: #000000;
 }
+
+
+/* errorlist */
+ul.errorlist{
+    list-style-type: none;
+    padding-left: 0px;
+}
+
+ul.errorlist li{
+    color: #ff2222;
+    margin-left: 0px;
+}

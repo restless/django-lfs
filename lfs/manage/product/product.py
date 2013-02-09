@@ -73,11 +73,14 @@ class ProductAddForm(forms.ModelForm):
         if uses_modeltranslation():
             name_fields = get_translation_fields('name')
 
-            values = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
-            values.extend([self.cleaned_data.get(trans_name, '') for trans_name in slug_fields])
+            values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+            values_slug = [self.cleaned_data.get(trans_name, '') for trans_name in slug_fields]
 
-            if not any(values):
-                raise forms.ValidationError(_('At least one name and one slug fields have to be filled'))
+            if not any(values_name):
+                raise forms.ValidationError(_('At least one name has to be defined'))
+
+            if not any(values_slug):
+                raise forms.ValidationError(_('At least one slug has to be defined'))
 
         # check for uniqueness
         for fname in slug_fields:

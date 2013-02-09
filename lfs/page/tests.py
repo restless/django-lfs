@@ -53,7 +53,7 @@ class PageTestCase(TestCase):
     def test_page_view_1(self):
         """Tests page view as superuser.
         """
-        url = reverse("lfs_page_view", kwargs={"slug": self.page.slug})
+        url = self.page.get_absolute_url()
         response = self.client.get(url)
         self.failIf(response.content.find("Page Title") == -1)
         self.failIf(response.content.find("<p>This is a body</p>") == -1)
@@ -63,7 +63,7 @@ class PageTestCase(TestCase):
         """
         self.client.logout()
 
-        url = reverse("lfs_page_view", kwargs={"slug": self.page.slug})
+        url = self.page.get_absolute_url()
         response = self.client.get(url)
 
         self.failIf(response.content.find("We are sorry") == -1)

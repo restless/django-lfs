@@ -1,5 +1,5 @@
 # django imports
-from django.http import Http404
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -8,12 +8,14 @@ from lfs.caching.utils import lfs_get_object_or_404
 from lfs.page.models import Page
 
 
-def page_view(request, slug, template_name="lfs/page/page.html"):
+def page_view(request, slug, page_id, template_name="lfs/page/page.html"):
     """Displays page with passed slug
     """
-    page = lfs_get_object_or_404(Page, slug=slug)
-    if page.id == 1:
+    if page_id == '1':
         raise Http404()
+    page = lfs_get_object_or_404(Page, id=page_id)
+    if page.slug != slug:
+        return HttpResponseRedirect(page.get_absolute_url())
 
     if request.user.is_superuser or page.active:
         return render_to_response(template_name, RequestContext(request, {

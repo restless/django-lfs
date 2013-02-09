@@ -23,8 +23,7 @@ from lfs.manage.categories.view import category_view
 from lfs.manage.categories.portlet import manage_categories_portlet
 from lfs.manage.seo.views import SEOView
 from lfs.manage.views.lfs_portlets import portlets_inline
-from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation, \
-    AVAILABLE_LANGUAGES, build_localized_fieldname
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation
 
 
 class CategoryAddForm(ModelForm):
@@ -54,11 +53,14 @@ class CategoryAddForm(ModelForm):
         if uses_modeltranslation():
             name_fields = get_translation_fields('name')
 
-            values = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
-            values.extend([self.cleaned_data.get(trans_name, '') for trans_name in slug_fields])
+            values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+            values_slug = [self.cleaned_data.get(trans_name, '') for trans_name in slug_fields]
 
-            if not any(values):
-                raise ValidationError(_('At least one name and one slug fields have to be filled'))
+            if not any(values_name):
+                raise ValidationError(_('At least one name has to be defined'))
+
+            if not any(values_slug):
+                raise ValidationError(_('At least one slug has to be defined'))
 
         # check for uniqueness
         for fname in slug_fields:

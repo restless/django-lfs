@@ -200,20 +200,20 @@ def set_price_filter(request, category_id):
     """Saves the given price filter to session. Redirects to the category with
     given slug.
     """
-    min = request.REQUEST.get("min", "0")
-    max = request.REQUEST.get("max", "99999")
+    min_price = request.REQUEST.get("min", "0")
+    max_price = request.REQUEST.get("max", "99999")
 
     try:
-        float(min)
+        float(min_price)
     except (TypeError, ValueError):
-        min = "0"
+        min_price = "0"
 
     try:
-        float(max)
+        float(max_price)
     except (TypeError, ValueError):
-        max = "0"
+        max_price = "0"
 
-    request.session["price-filter"] = {"min": min, "max": max}
+    request.session["price-filter"] = {"min": min_price, "max": max_price}
 
     url = Category.objects.get(pk=category_id).get_absolute_url()
     return HttpResponseRedirect(url)

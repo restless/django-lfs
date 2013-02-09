@@ -21,6 +21,7 @@ from lfs.manage.views.lfs_portlets import portlets_inline
 from lfs.manage.pages.forms import PageAddForm
 from lfs.manage.pages.forms import PageForm
 from lfs.page.models import Page
+from lfs.core.translation_utils import get_translation_fields
 
 
 # Views
@@ -73,8 +74,7 @@ def page_view_by_id(request, id, template_name="lfs/page/page.html"):
         raise Http404()
 
     page = lfs_get_object_or_404(Page, pk=id)
-    url = reverse("lfs_page_view", kwargs={"slug": page.slug})
-    return HttpResponseRedirect(url)
+    return HttpResponseRedirect(page.get_absolute_url())
 
 
 # Parts
@@ -87,8 +87,9 @@ def data_tab(request, page, template_name="manage/pages/data_tab.html"):
             page = form.save()
 
         # delete file
-        if request.POST.get("delete_file"):
-            page.file.delete()
+        for fname in get_translation_fields('file'):
+            if request.POST.get("delete_%s" % fname):
+                getattr(page, fname).delete()
 
     else:
         form = PageForm(instance=page)
