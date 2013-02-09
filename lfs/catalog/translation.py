@@ -1,6 +1,6 @@
 try:
     from modeltranslation.translator import translator, TranslationOptions
-    from .models import Category, DeliveryTime, Product
+    from .models import Category, DeliveryTime, Product, StaticBlock
 
     # category
     class CategoryTranslationOptions(TranslationOptions):
@@ -19,5 +19,11 @@ try:
             fields = ('description',)
 
     translator.register(DeliveryTime, DeliveryTimeTranslationOptions)
+
+    # static block
+    class StaticBlockTranslationOptions(TranslationOptions):
+            fields = ('name', 'html',)
+
+    translator.register(StaticBlock, StaticBlockTranslationOptions)
 except ImportError:
     pass

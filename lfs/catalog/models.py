@@ -708,8 +708,6 @@ class Product(models.Model):
         """
         Returns the absolute url of the product.
         """
-        print 'w get'
-        print lfs_reverse('lfs_product', kwargs={"slug": self.slug, 'product_id': self.pk})
         return lfs_reverse('lfs_product', kwargs={"slug": self.slug, 'product_id': self.pk})
 
     @property

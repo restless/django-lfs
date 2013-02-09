@@ -50,16 +50,24 @@ def prepare_fields_order(form, fields=None, exclude=None):
 
     if not fields:
         fields = fields_for_model(form.instance, exclude=exclude).keys()
-
-    if trans_dict:
-        for field in fields:
-            trans_fields = trans_dict.get(field, [field])
-            out.extend(trans_fields)
-            if len(trans_fields) > 1 and field in form.fields:
-                form.fields.pop(field)
+        # fields_for_model returns translated field names already so we just have to remove origin ones
+        if trans_dict:
+            for field in fields:
+                if field not in trans_dict:
+                    out.append(field)
+                else:
+                    form.fields.pop(field)
+        else:
+            out = fields
     else:
-        out = fields
-
+        if trans_dict:
+            for field in fields:
+                trans_fields = trans_dict.get(field, [field])
+                out.extend(trans_fields)
+                if len(trans_fields) > 1 and field in form.fields:
+                    form.fields.pop(field)
+        else:
+            out = fields
     form.fields.keyOrder = out
     return out
 

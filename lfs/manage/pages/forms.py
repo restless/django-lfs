@@ -26,7 +26,7 @@ class PageAddForm(ModelForm):
             self.fields['slug'].required = True
 
     def clean(self):
-        """ If translations are used then at least one name and one slug are required
+        """ If translations are used then at least one title and one slug are required
         """
         cleaned_data = super(PageAddForm, self).clean()
         slug_fields = get_translation_fields('slug')
