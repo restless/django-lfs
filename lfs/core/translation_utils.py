@@ -45,29 +45,31 @@ def prepare_fields_order(form, fields=None, exclude=None):
         will be:
         fields = ['slug_en', 'slug_de', 'name_en', 'name_de', 'is_active']
     """
+    all_fields = fields_for_model(form.instance).keys()
     trans_dict = get_translatable_fields_for_model(form.instance.__class__)
     out = []  # sort order
 
-    if not fields:
-        fields = fields_for_model(form.instance, exclude=exclude).keys()
-        # fields_for_model returns translated field names already so we just have to remove origin ones
-        if trans_dict:
-            for field in fields:
-                if field not in trans_dict:
-                    out.append(field)
-                else:
-                    form.fields.pop(field)
-        else:
-            out = fields
-    else:
-        if trans_dict:
+    if not exclude:
+        exclude = []
+
+    if trans_dict:
+        if fields:
             for field in fields:
                 trans_fields = trans_dict.get(field, [field])
                 out.extend(trans_fields)
-                if len(trans_fields) > 1 and field in form.fields:
-                    form.fields.pop(field)
         else:
-            out = fields
+            fields = all_fields[:]
+            for field in fields:
+                if field not in trans_dict:
+                    out.append(field)
+
+    for field in exclude:
+        out.remove(field)
+
+    for field in all_fields:
+        if field not in out:
+            form.fields.pop(field)
+
     form.fields.keyOrder = out
     return out
 

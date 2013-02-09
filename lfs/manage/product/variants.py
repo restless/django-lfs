@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import permission_required
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
-from django.forms import ModelForm
+from django.forms import ModelForm, ValidationError
 from django.forms.widgets import Select
 from django.http import HttpResponse
 from django.template import RequestContext
@@ -28,6 +28,7 @@ from lfs.catalog.settings import PROPERTY_VALUE_TYPE_VARIANT
 from lfs.catalog.settings import VARIANT, PROPERTY_SELECT_FIELD
 from lfs.core.utils import LazyEncoder
 from lfs.manage import utils as manage_utils
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation
 
 
 class PropertyOptionForm(ModelForm):
@@ -41,10 +42,39 @@ class PropertyOptionForm(ModelForm):
 class PropertyForm(ModelForm):
     """Form to add/edit properties.
     """
+    def __init__(self, *args, **kwargs):
+        super(PropertyForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=("name", ))
+
+    def clean(self):
+        """ If translations are used then at least one name is required
+        """
+        cleaned_data = super(PropertyForm, self).clean()
+        name_fields = get_translation_fields('name')
+
+        # at least one name and one slug has to be defined
+        if uses_modeltranslation():
+            values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+
+            if not any(values_name):
+                raise ValidationError(_('At least one name has to be defined'))
+
+        # check for uniqueness
+        for fname in name_fields:
+            val = self.cleaned_data.get(fname).strip()
+            if val:
+                qs = self._meta.model.objects.filter(**{fname: val})
+                if self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    msg = _(u"Name '%s' already exists!") % val
+                    self._errors[fname] = self.error_class([msg])
+                    del cleaned_data[fname]
+
+        return cleaned_data
+
     class Meta:
         model = Property
-        fields = ("name", )
-
 
 class ProductVariantSimpleForm(ModelForm):
     """Form to add/edit variants options.
@@ -100,12 +130,12 @@ class DefaultVariantForm(ModelForm):
 
 
 @permission_required("core.manage_shop")
-def manage_variants(request, product_id, as_string=False, template_name="manage/product/variants.html"):
+def manage_variants(request, product_id, as_string=False, property_form=None, template_name="manage/product/variants.html"):
     """Manages the variants of a product.
     """
     product = Product.objects.get(pk=product_id)
-
-    property_form = PropertyForm()
+    if not property_form:
+        property_form = PropertyForm()
     property_option_form = PropertyOptionForm()
     variant_simple_form = ProductVariantSimpleForm()
     display_type_form = DisplayTypeForm(instance=product)
@@ -194,7 +224,7 @@ def add_property(request, product_id):
     """
     product = Product.objects.get(pk=product_id)
     property_form = PropertyForm(data=request.POST)
-    if property_form.is_valid():
+    if request.POST and property_form.is_valid():
         property = property_form.save(commit=False)
         property.title = property.name
         property.type = PROPERTY_SELECT_FIELD
@@ -213,12 +243,13 @@ def add_property(request, product_id):
         for i, product_property in enumerate(product.productsproperties.all()):
             product_property.position = i
             product_property.save()
+        property_form = PropertyForm()
 
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, property_form=property_form, as_string=True)]]
 
     result = simplejson.dumps({
         "html": html,

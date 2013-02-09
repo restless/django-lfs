@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n lfs_modeltranslation_tags %}
 
 <div id="variants">
     <h2>{% trans 'Property Groups' %}</h2>
@@ -32,14 +32,24 @@
           class="property-edit-field"
           action="{% url lfs_manage_add_property product.id %}"
           method="post">
-        {{ property_form.name }}
+        {{ property_form.non_field_errors }}
+        {% translatedfields property_form "name" %}
+            <div class="field">
+                <div class="label">
+                    {{ translated_field.label_tag }}:
+                </div>
+                {{ translated_field.errors }}
+                {{ translated_field }}
+            </div>
+        {% endtranslatedfields %}
+
         <input class="ajax-save-button"
                type="submit"
                value="{% trans 'Add property' %}" />
     </form>
 
     {% for property in local_properties %}
-        <div style="font-weight:bold">{{ property.name }}
+        <div style="font-weight:bold">{% fortranslatedattrs property "name" %}{% if translated_attr %}[{{ translation_language }}]: {{ translated_attr }}{% if not fortranslatedattrsloop.last %}, {% endif %}{% endif %}{% endfortranslatedattrs %}
             {% if not forloop.first %}
                 <a href="{% url lfs_manage_change_property_position %}?product_id={{ product.id }}&amp;property_id={{ property.id }}&amp;direction=up"
                    class="ajax-link property-edit-field">

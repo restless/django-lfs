@@ -1,5 +1,4 @@
 # django imports
-from django.forms import ModelForm
 from django.forms import ModelForm, ValidationError
 from django.utils.translation import ugettext_lazy as _
 
@@ -23,8 +22,6 @@ class StaticBlockForm(ModelForm):
 
         # at least one name and one slug has to be defined
         if uses_modeltranslation():
-            title_fields = get_translation_fields('title')
-
             values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
 
             if not any(values_name):
