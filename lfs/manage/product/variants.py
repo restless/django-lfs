@@ -34,9 +34,39 @@ from lfs.core.translation_utils import prepare_fields_order, get_translation_fie
 class PropertyOptionForm(ModelForm):
     """Form to add/edit property options.
     """
+    def __init__(self, *args, **kwargs):
+        super(PropertyOptionForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=("name", ))
+
+    def clean(self):
+        """ If translations are used then at least one name is required
+        """
+        cleaned_data = super(PropertyOptionForm, self).clean()
+        name_fields = get_translation_fields('name')
+
+        # at least one name and one slug has to be defined
+        if uses_modeltranslation():
+            values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+
+            if not any(values_name):
+                raise ValidationError(_('At least one name has to be defined'))
+
+        # check for uniqueness
+        for fname in name_fields:
+            val = self.cleaned_data.get(fname).strip()
+            if val:
+                qs = self._meta.model.objects.filter(**{fname: val})
+                if self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    msg = _(u"Name '%s' already exists!") % val
+                    self._errors[fname] = self.error_class([msg])
+                    del cleaned_data[fname]
+
+        return cleaned_data
+
     class Meta:
         model = PropertyOption
-        fields = ("name", )
 
 
 class PropertyForm(ModelForm):
@@ -130,13 +160,14 @@ class DefaultVariantForm(ModelForm):
 
 
 @permission_required("core.manage_shop")
-def manage_variants(request, product_id, as_string=False, property_form=None, template_name="manage/product/variants.html"):
+def manage_variants(request, product_id, as_string=False, property_form=None, property_option_form=None, template_name="manage/product/variants.html"):
     """Manages the variants of a product.
     """
     product = Product.objects.get(pk=product_id)
     if not property_form:
         property_form = PropertyForm()
-    property_option_form = PropertyOptionForm()
+    if not property_option_form:
+        property_option_form = PropertyOptionForm()
     variant_simple_form = ProductVariantSimpleForm()
     display_type_form = DisplayTypeForm(instance=product)
     default_variant_form = DefaultVariantForm(instance=product)
@@ -329,27 +360,24 @@ def add_property_option(request, product_id):
     """
     property_option_form = PropertyOptionForm(data=request.POST)
     if property_option_form.is_valid():
-        names = request.POST.get("name").split(",")
-        position = 999
         property_id = request.POST.get("property_id")
-        for name in names:
-            property_option = PropertyOption(name=name)
-            property_option.property_id = property_id
-            property_option.position = position
-            property_option.save()
-            position += 1
+        property_option = property_option_form.save(commit=False)
+        property_option.property_id = property_id
+        property_option.position = 999
+        property_option.save()
 
         # Refresh positions
         for i, option in enumerate(PropertyOption.objects.filter(property=property_id)):
             option.position = i
             option.save()
+        property_option_form = PropertyOptionForm()
 
     product = Product.objects.get(pk=product_id)
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, property_option_form=property_option_form, as_string=True)]]
 
     result = simplejson.dumps({
         "html": html,

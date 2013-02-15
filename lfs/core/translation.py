@@ -1,6 +1,6 @@
 try:
     from modeltranslation.translator import translator, TranslationOptions
-    from .models import Action, ActionGroup
+    from .models import Action
 
 
     class ActionTranslationOptions(TranslationOptions):

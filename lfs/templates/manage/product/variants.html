@@ -80,7 +80,7 @@
         <div class="property-options">
             {% for option in property.options.all %}
                 <div>
-                    {{ option.name }}
+                    {% fortranslatedattrs option "name" %}{% if translated_attr %}[{{ translation_language }}]: {{ translated_attr }}{% if not fortranslatedattrsloop.last %}, {% endif %}{% endif %}{% endfortranslatedattrs %}
                     <a href="{% url lfs_manage_delete_property_option product.id option.id %}"
                        class="delete-link property-edit-field"
                        dialog_message="{% trans 'Do you really want to delete this option?' %}"
@@ -95,7 +95,17 @@
             <div class="property-edit-field">
                 <form action="{% url lfs_manage_add_property_option product.id %}"
                       method="post">
-                    {{ property_option_form.name }}
+                    {{ property_option_form.non_field_errors }}
+                    {% translatedfields property_option_form "name" %}
+                        <div class="field">
+                            <div class="label">
+                                {{ translated_field.label_tag }}:
+                            </div>
+                            {{ translated_field.errors }}
+                            {{ translated_field }}
+                        </div>
+                    {% endtranslatedfields %}
+
                     <input type="hidden" name="property_id" value="{{ property.id }}" />
                     <input type="submit"
                            class="ajax-save-button"

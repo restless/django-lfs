@@ -1,6 +1,6 @@
 try:
     from modeltranslation.translator import translator, TranslationOptions
-    from .models import Category, DeliveryTime, Product, StaticBlock, Property
+    from .models import Category, DeliveryTime, Product, StaticBlock, Property, PropertyOption
 
     # category
     class CategoryTranslationOptions(TranslationOptions):
@@ -26,11 +26,16 @@ try:
 
     translator.register(StaticBlock, StaticBlockTranslationOptions)
 
-    # static block
+    # property
     class PropertyTranslationOptions(TranslationOptions):
             fields = ('name', 'title', )
 
     translator.register(Property, PropertyTranslationOptions)
 
+    # property option
+    class PropertyOptionTranslationOptions(TranslationOptions):
+            fields = ('name', )
+
+    translator.register(PropertyOption, PropertyOptionTranslationOptions)
 except ImportError:
     pass
