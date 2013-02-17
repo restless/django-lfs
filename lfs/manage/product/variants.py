@@ -28,15 +28,16 @@ from lfs.catalog.settings import PROPERTY_VALUE_TYPE_VARIANT
 from lfs.catalog.settings import VARIANT, PROPERTY_SELECT_FIELD
 from lfs.core.utils import LazyEncoder
 from lfs.manage import utils as manage_utils
-from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation, get_languages_list, build_localized_fieldname
 
 
 class PropertyOptionForm(ModelForm):
     """Form to add/edit property options.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, property_id=None, *args, **kwargs):
         super(PropertyOptionForm, self).__init__(*args, **kwargs)
         prepare_fields_order(self, fields=("name", ))
+        self.property_id = property_id
 
     def clean(self):
         """ If translations are used then at least one name is required
@@ -106,12 +107,51 @@ class PropertyForm(ModelForm):
     class Meta:
         model = Property
 
+
 class ProductVariantSimpleForm(ModelForm):
     """Form to add/edit variants options.
     """
+    def __init__(self, options=None, product=None, *args, **kwargs):
+        super(ProductVariantSimpleForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=("slug", "name", "price"))
+        self.options = options
+        self.product = product
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        for lang in get_languages_list():
+            trans_slug = build_localized_fieldname("slug", lang)
+            slug = cleaned_data.get(trans_slug)
+
+            for option in self.options:
+                property_id, option_id = option.split("|")
+                o = PropertyOption.objects.get(pk=option_id)
+                if slug:
+                    slug += "-"
+                slug += slugify(o.name)
+
+            product_slug = getattr(self.product, trans_slug)
+            slug = "%s-%s" % (product_slug, slug)
+
+            message = ''
+
+            # need to validate the amalgamated slug to make sure it is not already in use
+            try:
+                variant = Product.objects.get(**{trans_slug: slug})
+                message = _(u"That slug is already in use. Please use another.")
+            except Product.MultipleObjectsReturned:
+                message = _(u"That slug is already in use. Please use another.")
+            except Product.DoesNotExist:
+                cleaned_data[trans_slug] = slug
+
+            if message:
+                self._errors[trans_slug] = self.error_class([message])
+                del cleaned_data[trans_slug]
+
+        return cleaned_data
+
     class Meta:
         model = Product
-        fields = ("slug", "name", "price", )
 
 
 class CategoryVariantForm(ModelForm):
@@ -160,15 +200,16 @@ class DefaultVariantForm(ModelForm):
 
 
 @permission_required("core.manage_shop")
-def manage_variants(request, product_id, as_string=False, property_form=None, property_option_form=None, template_name="manage/product/variants.html"):
+def manage_variants(request, product_id, as_string=False, property_form=None, current_property_option_form=None,
+                    variant_simple_form=None, template_name="manage/product/variants.html"):
     """Manages the variants of a product.
     """
     product = Product.objects.get(pk=product_id)
     if not property_form:
         property_form = PropertyForm()
-    if not property_option_form:
-        property_option_form = PropertyOptionForm()
-    variant_simple_form = ProductVariantSimpleForm()
+    property_option_form = PropertyOptionForm()
+    if not variant_simple_form:
+        variant_simple_form = ProductVariantSimpleForm()
     display_type_form = DisplayTypeForm(instance=product)
     default_variant_form = DefaultVariantForm(instance=product)
     category_variant_form = CategoryVariantForm(instance=product)
@@ -177,6 +218,9 @@ def manage_variants(request, product_id, as_string=False, property_form=None, pr
     group_id = get_cache_group_id('properties-%s' % pid)
     cache_key = "%s-manage-properties-variants-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, group_id, product_id)
     variants = cache.get(cache_key)
+
+    languages_list = get_languages_list()
+
     # Get all properties. We need to traverse through all property / options
     # in order to select the options of the current variant.
     if variants is None:
@@ -200,8 +244,7 @@ def manage_variants(request, product_id, as_string=False, property_form=None, pr
                     "name": property.name,
                     "options": options
                 })
-
-            variants.append({
+            obj = {
                 "id": variant.id,
                 "active": variant.active,
                 "slug": variant.slug,
@@ -213,7 +256,15 @@ def manage_variants(request, product_id, as_string=False, property_form=None, pr
                 "active_name": variant.active_name,
                 "position": variant.variant_position,
                 "properties": properties
-            })
+            }
+
+            for lang in languages_list:
+                trans_slug = build_localized_fieldname('slug', lang)
+                trans_name = build_localized_fieldname('name', lang)
+                obj[trans_slug] = getattr(variant, trans_slug)
+                obj[trans_name] = getattr(variant, trans_name)
+
+            variants.append(obj)
 
         cache.set(cache_key, variants)
 
@@ -235,6 +286,7 @@ def manage_variants(request, product_id, as_string=False, property_form=None, pr
         "local_properties": product.get_local_properties(),
         "all_properties": product.get_property_select_fields(),
         "property_option_form": property_option_form,
+        "current_property_option_form": current_property_option_form,
         "property_form": property_form,
         "variant_simple_form": variant_simple_form,
         "display_type_form": display_type_form,
@@ -295,12 +347,12 @@ def delete_property(request, product_id, property_id):
     """Deletes property with passed property id.
     """
     try:
-        property = Property.objects.get(pk=property_id)
+        prop = Property.objects.get(pk=property_id)
         product = Product.objects.get(pk=product_id)
     except ObjectDoesNotExist:
         pass
     else:
-        property.delete()
+        prop.delete()
         product_changed.send(product)
         pid = product.get_parent().pk
         invalidate_cache_group_id('properties-%s' % pid)
@@ -358,9 +410,9 @@ def add_property_option(request, product_id):
 
     TODO: Do this with REFERER
     """
-    property_option_form = PropertyOptionForm(data=request.POST)
+    property_id = int(request.POST.get("property_id"))
+    property_option_form = PropertyOptionForm(property_id=property_id, data=request.POST)
     if property_option_form.is_valid():
-        property_id = request.POST.get("property_id")
         property_option = property_option_form.save(commit=False)
         property_option.property_id = property_id
         property_option.position = 999
@@ -370,18 +422,21 @@ def add_property_option(request, product_id):
         for i, option in enumerate(PropertyOption.objects.filter(property=property_id)):
             option.position = i
             option.save()
-        property_option_form = PropertyOptionForm()
+        property_option_form = None
+        message = _(u"Option has been added.")
+    else:
+        message = _(u"Invalid data. Correct it and try again.")
 
     product = Product.objects.get(pk=product_id)
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, property_option_form=property_option_form, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, current_property_option_form=property_option_form, as_string=True)]]
 
     result = simplejson.dumps({
         "html": html,
-        "message": _(u"Option has been added."),
+        "message": message,
     }, cls=LazyEncoder)
 
     return HttpResponse(result)
@@ -422,14 +477,6 @@ def add_variants(request, product_id):
 
     product = Product.objects.get(pk=product_id)
 
-    # Add variant(s)
-    #variant_simple_form = ProductVariantSimpleForm(data=request.POST)
-
-    # We don't have to check whether the form is valid. If the fields
-    # are empty we create default ones.
-
-    variants_count = product.variants.count()
-
     # First we need to prepare the requested properties for the use
     # with cartesian product. That means if the keyword "all" is
     # found we collect all options of this properties.
@@ -445,45 +492,28 @@ def add_variants(request, product_id):
             else:
                 properties.append(["%s|%s" % (property_id, value)])
 
-    # Create a variant for every requested option combination
+    # Add variant(s)
     for i, options in enumerate(manage_utils.cartesian_product(*properties)):
-
         if product.has_variant(options):
             continue
 
-        name = request.POST.get("name")
-        price = request.POST.get("price")
-        slug = request.POST.get("slug")
-
-        for option in options:
-            property_id, option_id = option.split("|")
-            o = PropertyOption.objects.get(pk=option_id)
-            if slug:
-                slug += "-"
-            slug += slugify(o.name)
-
-        slug = "%s-%s" % (product.slug, slug)
-        sku = "%s-%s" % (product.sku, i + 1)
-
-        variant = None
-        # need to validate the amalgamated slug to make sure it is not already in use
-        try:
-            variant = Product.objects.get(slug=slug)
-            message = _(u"That slug is already in use. Please use another.")
-        except Product.MultipleObjectsReturned:
-            message = _(u"That slug is already in use. Please use another.")
-        except Product.DoesNotExist:
-            variant = Product(name=name, slug=slug, sku=sku, parent=product, price=price,
-                              variant_position=(variants_count + i + 1) * 10, sub_type=VARIANT)
+        variant_simple_form = ProductVariantSimpleForm(options=options, product=product, data=request.POST)
+        if variant_simple_form.is_valid():
+            variants_count = product.variants.count()
+            variant = variant_simple_form.save(commit=False)
+            variant.sku = "%s-%s" % (product.sku, i + 1)
+            variant.parent = product
+            variant.variant_position = (variants_count + i + 1) * 10
+            variant.sub_type = VARIANT
             try:
                 variant.save()
             except IntegrityError:
                 continue
-            else:
-                # By default we copy the property groups of the product to
-                # the variants
-                for property_group in product.property_groups.all():
-                    variant.property_groups.add(property_group)
+
+            # By default we copy the property groups of the product to
+            # the variants
+            for property_group in product.property_groups.all():
+                variant.property_groups.add(property_group)
 
             # Save the value for this product and property.
             for option in options:
@@ -493,12 +523,15 @@ def add_variants(request, product_id):
                 # the users would expect.
                 if Property.objects.get(pk=property_id).filterable:
                     ProductPropertyValue.objects.create(product=variant, property_id=property_id, value=option_id, type=PROPERTY_VALUE_TYPE_FILTER)
-
-            message = _(u"Variants have been added.")
+        else:
+            break
+    else:
+        message = _(u"Variants have been added.")
+        variant_simple_form = ProductVariantSimpleForm()
 
     html = (
         ("#selectable-products-inline", _selectable_products_inline(request, product)),
-        ("#variants", manage_variants(request, product_id, as_string=True)),
+        ("#variants", manage_variants(request, product_id, variant_simple_form=variant_simple_form, as_string=True)),
     )
 
     result = simplejson.dumps({
@@ -533,6 +566,7 @@ def update_variants(request, product_id):
                     variant.delete()
     elif action == "update":
         message = _(u"Variants have been saved.")
+        languages_list = get_languages_list()
         for key, value in request.POST.items():
             if key.startswith("variant-"):
                 id = key.split("-")[1]
@@ -541,13 +575,21 @@ def update_variants(request, product_id):
                 except ObjectDoesNotExist:
                     continue
                 else:
-                    for name in ("slug", "sku", "price"):
+                    for name in ("sku", "price"):
                         value = request.POST.get("%s-%s" % (name, id))
                         if value != "":
                             setattr(variant, name, value)
 
-                    # name
-                    variant.name = request.POST.get("name-%s" % id)
+                    # slug and name
+                    for lang in languages_list:
+                        trans_slug = build_localized_fieldname('slug', lang)
+                        trans_name = build_localized_fieldname('name', lang)
+
+                        value = request.POST.get("%s-%s-%s" % ("slug", lang, id))
+                        if value != "":
+                            setattr(variant, trans_slug, value)
+
+                        setattr(variant, trans_name, request.POST.get("name-%s-%s" % (lang, id)))
 
                     # active
                     active = request.POST.get("active-%s" % id)

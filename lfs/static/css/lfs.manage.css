@@ -173,6 +173,7 @@ table.lfs-manage-table.top td {
 td.left-slot {
   padding: 10px 20px 0 0;
   width: 200px;
+  min-width: 150px;
 }
 
 td.middle-slot {
@@ -872,4 +873,31 @@ ul.errorlist{
 ul.errorlist li{
     color: #ff2222;
     margin-left: 0px;
+}
+
+
+/* variants */
+#variants-form table td, #variants-form table th {
+    white-space: nowrap;
+}
+
+.property-edit-field fieldset{
+    display: inline-block;
+    margin: 5px;
+}
+
+.property-edit-field div.label{
+    display: inline-block;
+    min-width: 110px;
+}
+
+.ui-widget-content a {
+    display: inline-block;
+    vertical-align: top;
+}
+
+div.translated-field div.label {
+    display: inline-block;
+    min-width: 30px;
+    text-align: right;
 }

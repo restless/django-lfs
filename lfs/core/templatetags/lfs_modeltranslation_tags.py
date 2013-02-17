@@ -60,17 +60,19 @@ def do_set_translated_fields(parser, token):
 
 
 class NTAttrsNode(template.Node):
-    def __init__(self, obj, attr_name, nodelist):
+    def __init__(self, obj, attr_name, show_empty, nodelist):
         self.obj = template.Variable(obj)
         self.attr_name = template.Variable(attr_name)
+        self.show_empty = template.Variable(show_empty)
         self.request = template.Variable('request')
         self.nodelist = nodelist
 
     def render(self, context):
-        """ prepare list of translation attributes for specific name
+        """ prepare list of translation attributes for specific attribute/item
         """
         obj = self.obj.resolve(context)
         attr_name = self.attr_name.resolve(context)
+        show_empty = self.show_empty.resolve(context)
 
         default_language = get_default_language()
 
@@ -80,8 +82,11 @@ class NTAttrsNode(template.Node):
         for i, lang in enumerate(langs_list):
             ctx = {}
             tname = build_localized_fieldname(attr_name, lang)
-            ctx['translated_attr'] = getattr(obj, tname, '')
-            if not ctx['translated_attr']:
+            if hasattr(obj, '__getitem__'):
+                ctx['translated_attr'] = obj.get(tname, '')
+            else:
+                ctx['translated_attr'] = getattr(obj, tname, '')
+            if not ctx['translated_attr'] and not show_empty:
                 continue
             ctx['translation_language'] = lang
             if lang == default_language:
@@ -90,7 +95,7 @@ class NTAttrsNode(template.Node):
 
         last = len(out) - 1
         for i, ctx in enumerate(out):
-            out[i]['fortranslatedattrsloop'] = {'last': i == last, 'first': i == 0}
+            out[i]['fortranslatedattrsloop'] = {'last': i == last, 'first': i == 0, 'count': i}
         for ctx in out:
             context.update(ctx)
             output.append(self.nodelist.render(context))
@@ -99,14 +104,30 @@ class NTAttrsNode(template.Node):
 
 @register.tag(name="fortranslatedattrs")
 def do_set_translated_attrs(parser, token):
+    """ Iterates through all translated versions of specific attribute of object, eg:
+        {% fortranslatedattrs obj "slug" 1 %}
+           {{ fortranslatedloop.count }}. lang: {{ translation_language }}: {{ translated_attr }}
+        {% endfortranslatedattrs %}
+
+        for en, de, pl languages will result in something like:
+
+          1. lang: en: english_value
+          2. lang: de: german_value
+          3. lang: pl: polish_value
+
+        Parameters:
+        obj - object
+        attr_name - attribute (or key for dict) name
+        show_empty - whether to show or hide empty translations
+    """
     try:
         # split_contents() knows not to split quoted strings.
-        tag_name, obj, attr_name = token.split_contents()
+        tag_name, obj, attr_name, show_empty = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError("%r tag requires form and field arguments" % token.contents.split()[0])
+        raise template.TemplateSyntaxError("%r tag requires obj, field, show_empty arguments" % token.contents.split()[0])
     nodelist = parser.parse(('endfortranslatedattrs',))
     parser.delete_first_token()
-    return NTAttrsNode(obj, attr_name, nodelist)
+    return NTAttrsNode(obj, attr_name, show_empty, nodelist)
 
 
 class SwitchLanguageNode(template.Node):
