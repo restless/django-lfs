@@ -10,15 +10,17 @@ from django.template.loader import render_to_string
 from django.utils import simplejson
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_POST
+from django.forms.models import modelformset_factory
 
 # lfs imports
+from lfs.core.translation_utils import get_languages_list
 import lfs.core.utils
 from lfs.core.utils import LazyEncoder
 from lfs.core.signals import property_type_changed
 from lfs.catalog.models import Property
 from lfs.catalog.models import PropertyOption
 from lfs.catalog.models import FilterStep
-from lfs.manage.property.forms import PropertyAddForm
+from lfs.manage.property.forms import PropertyAddForm, PropertyOptionForm
 from lfs.manage.property.forms import PropertyDataForm
 from lfs.manage.property.forms import PropertyTypeForm
 from lfs.manage.property.forms import StepTypeForm
@@ -28,6 +30,9 @@ from lfs.manage.property.forms import StepRangeForm
 
 
 # Views
+from modeltranslation.utils import build_localized_fieldname
+
+
 @permission_required("core.manage_shop")
 def manage_properties(request):
     """The main view to manage properties.
@@ -248,8 +253,8 @@ def delete_step(request, id):
     except FilterStep.DoesNotExist:
         url = request.META.get("HTTP_REFERER", reverse("lfs_manage_shop_property"))
     else:
-        property = step.property
-        url = reverse("lfs_manage_shop_property", kwargs={"id": property.id})
+        prop = step.property
+        url = reverse("lfs_manage_shop_property", kwargs={"id": prop.id})
         step.delete()
 
     response = HttpResponseRedirect(url)
@@ -257,12 +262,21 @@ def delete_step(request, id):
 
 
 @permission_required("core.manage_shop")
-def options_inline(request, property_id, template_name="manage/properties/options_inline.html"):
+def options_inline(request, property_id, form=None, formset=None, template_name="manage/properties/options_inline.html"):
     """Display the options of a propety. Factored out for Ajax requests.
     """
-    property = get_object_or_404(Property, pk=property_id)
+    prop = get_object_or_404(Property, pk=property_id)
+    if not form:
+        form = PropertyOptionForm()
+
+    if not formset:
+        PropertyOptionFormSet = modelformset_factory(PropertyOption, form=PropertyOptionForm, extra=0)
+        formset = PropertyOptionFormSet(queryset=prop.options.all())
+
     return render_to_string(template_name, RequestContext(request, {
-        "property": property,
+        "property": prop,
+        "form": form,
+        "formset": formset
     }))
 
 
@@ -275,7 +289,10 @@ def add_property(request, template_name="manage/properties/add_property.html"):
         if form.is_valid():
             property = form.save()
             property.position = 1000
-            property.title = property.name
+            for lang in get_languages_list():
+                trans_name = build_localized_fieldname("name", lang)
+                trans_title = build_localized_fieldname("title", lang)
+                setattr(property, trans_title, getattr(property, trans_name))
             property.save()
             _update_property_positions()
             return lfs.core.utils.set_message_cookie(
@@ -314,44 +331,53 @@ def delete_property(request, id):
 def add_option(request, property_id):
     """Adds option to property with passed property id.
     """
-    property = get_object_or_404(Property, pk=property_id)
+    prop = get_object_or_404(Property, pk=property_id)
+    formset = None
 
     if request.POST.get("action") == "add":
-        name = request.POST.get("name", "")
-        price = request.POST.get("price", "")
-        try:
-            price = float(price)
-        except ValueError:
-            price = 0.0
-
-        if name != "":
-            option = PropertyOption.objects.create(name=name, price=price, property_id=property_id)
+        form = PropertyOptionForm(request.POST)
+        if form.is_valid():
+            option = form.save(commit=False)
+            option.property_id = property_id
+            option.save()
             message = _(u"Option has been added.")
+            form = PropertyOptionForm()
         else:
             message = _(u"Option could not be added.")
     else:
+        form = PropertyOptionForm()
 
-        for option_id in request.POST.getlist("option"):
+        PropertyOptionFormSet = modelformset_factory(PropertyOption, form=PropertyOptionForm, extra=0)
+        formset = PropertyOptionFormSet(request.POST, request.FILES, queryset=prop.options.all())
 
-            try:
-                option = PropertyOption.objects.get(pk=option_id)
-            except PropertyOption.DoesNotExist:
-                pass
-            else:
-                try:
-                    price = float(request.POST.get("price-%s" % option_id, ""))
-                except ValueError:
-                    price = 0.0
+        if formset.is_valid():
+            formset.save()
+            prop = Property.objects.get(pk=prop.pk)
 
-                option.position = request.POST.get("position-%s" % option_id, 99)
-                option.name = request.POST.get("name-%s" % option_id, "")
-                option.price = price
-                option.save()
-        message = _(u"Options have been updated.")
+            formset = PropertyOptionFormSet(queryset=prop.options.all())
 
-    _update_positions(property)
+        # for option_id in request.POST.getlist("option"):
+        #     try:
+        #         option = PropertyOption.objects.get(pk=option_id)
+        #     except PropertyOption.DoesNotExist:
+        #         pass
+        #     else:
+        #         try:
+        #             price = float(request.POST.get("price-%s" % option_id, ""))
+        #         except ValueError:
+        #             price = 0.0
+        #
+        #         option.position = request.POST.get("position-%s" % option_id, 99)
+        #         option.name = request.POST.get("name-%s" % option_id, "")
+        #         option.price = price
+        #         option.save()
+            message = _(u"Options have been updated.")
+        else:
+            message = _(u"Correct errors and try again.")
 
-    html = [["#options", options_inline(request, property_id)]]
+    _update_positions(prop)
+
+    html = [["#options", options_inline(request, property_id, form=form, formset=formset)]]
     result = simplejson.dumps({
         "html": html,
         "message": message

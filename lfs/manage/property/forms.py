@@ -3,16 +3,19 @@ from django.forms import ModelForm, ValidationError
 from django.utils.translation import ugettext_lazy as _
 
 # lfs imports
-from lfs.catalog.models import Property
+from lfs.catalog.models import Property, PropertyOption
 from lfs.core.translation_utils import prepare_fields_order, get_translation_fields, uses_modeltranslation
 
 
 class PropertyAddForm(ModelForm):
     """Form to add a property.
     """
+    def __init__(self, *args, **kwargs):
+        super(PropertyAddForm, self).__init__(*args, **kwargs)
+        prepare_fields_order(self, fields=("name", ))
+
     class Meta:
         model = Property
-        fields = ["name"]
 
 
 class PropertyDataForm(ModelForm):
@@ -30,7 +33,7 @@ class PropertyDataForm(ModelForm):
         title_fields = get_translation_fields('title')
         name_fields = get_translation_fields('name')
 
-        # at least one name and one slug has to be defined
+        # at least one name and one title has to be defined
         if uses_modeltranslation():
             values_title = [self.cleaned_data.get(trans_name, '') for trans_name in title_fields]
             values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
@@ -97,3 +100,35 @@ class StepRangeForm(ModelForm):
     class Meta:
         model = Property
         fields = ["step"]
+
+
+class PropertyOptionForm(ModelForm):
+    """Form to add a property option.
+    """
+    def __init__(self, *args, **kwargs):
+        super(PropertyOptionForm, self).__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial['position'] = ''
+        self.fields['position'].widget.attrs = {'class': 'number', 'size': 3}
+        self.fields['position'].required = False
+        prepare_fields_order(self, fields=("position", "name", "price"))
+
+    def clean(self):
+        """ If translations are used then at least one name is required
+        """
+        cleaned_data = super(PropertyOptionForm, self).clean()
+        if not cleaned_data.get('position', ''):
+            self.cleaned_data['position'] = 99
+        name_fields = get_translation_fields('name')
+
+        # at least one name has to be defined
+        if uses_modeltranslation():
+            values_name = [self.cleaned_data.get(trans_name, '') for trans_name in name_fields]
+
+            if not any(values_name):
+                raise ValidationError(_('At least one name has to be defined'))
+
+        return cleaned_data
+
+    class Meta:
+        model = PropertyOption
