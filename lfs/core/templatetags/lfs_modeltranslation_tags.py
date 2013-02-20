@@ -133,14 +133,15 @@ def do_set_translated_attrs(parser, token):
 class SwitchLanguageNode(template.Node):
     def __init__(self, language_code, nodelist):
         self.request = template.Variable('request')
-        self.language_code = language_code
+        self.language_code = template.Variable(language_code)
         self.nodelist = nodelist
 
     def render(self, context):
         """ prepare list of translation fields (Form) for specific field name
         """
+        language_code = self.language_code.resolve(context)
         current_language = translation.get_language()
-        translation.activate(self.language_code)
+        translation.activate(language_code)
         out = self.nodelist.render(context)
         translation.activate(current_language)
         return out

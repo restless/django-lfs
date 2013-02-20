@@ -166,16 +166,16 @@ class VariantDataForm(forms.ModelForm):
     """
     Form to add and edit master data of a variant.
     """
-    class Meta:
-        model = Product
-        fields = ("active", "active_name", "name", "slug", "manufacturer", "active_sku", "sku", "sku_manufacturer",
-            "active_price", "price", "price_calculator", "active_short_description", "short_description", "active_description",
-            "description", "for_sale", "for_sale_price", "active_for_sale", "active_for_sale_price",
-            "active_related_products", "active_static_block", "static_block", "template",
-            "active_base_price", "base_price_unit", "base_price_amount")
-
     def __init__(self, *args, **kwargs):
         super(VariantDataForm, self).__init__(*args, **kwargs)
+
+        prepare_fields_order(self, fields=("active", "active_name", "name", "slug", "manufacturer", "active_sku", "sku", "sku_manufacturer",
+                    "active_price", "price", "price_calculator", "active_short_description", "short_description", "active_description",
+                    "description", "for_sale", "for_sale_price", "active_for_sale", "active_for_sale_price",
+                    "active_related_products", "active_static_block", "static_block", "template",
+                    "active_base_price", "base_price_unit", "base_price_amount"))
+
+
         self.fields["template"].widget = SelectImage(choices=PRODUCT_TEMPLATES)
         self.fields["active_base_price"].widget = Select(choices=CHOICES)
 
@@ -205,6 +205,9 @@ class VariantDataForm(forms.ModelForm):
                 self.errors["base_price_amount"] = ErrorList([_(u"This field is required.")])
 
         return self.cleaned_data
+
+    class Meta:
+        model = Product
 
 
 class ProductStockForm(forms.ModelForm):
