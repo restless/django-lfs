@@ -21,6 +21,7 @@ from lfs.catalog.settings import PROPERTY_VALUE_TYPE_DEFAULT
 from lfs.catalog.settings import PROPERTY_VALUE_TYPE_FILTER
 from lfs.catalog.settings import PROPERTY_VALUE_TYPE_DISPLAY
 from lfs.core.signals import product_removed_property_group
+from lfs.core.translation_utils import get_languages_list, build_localized_fieldname
 
 
 @permission_required("core.manage_shop")
@@ -39,26 +40,35 @@ def manage_properties(request, product_id, template_name="manage/product/propert
     displayables = []
     parent_local_properties = []
 
+    langs = get_languages_list()
+
     # Configurable
     if not product.is_product_with_variants():
         for property_group in product.property_groups.all():
             properties = []
-            for property in property_group.properties.filter(configurable=True).order_by("groupspropertiesrelation"):
+            for prop in property_group.properties.filter(configurable=True).order_by("groupspropertiesrelation"):
 
                 display_configurables = True
+                ppv_values = {}
 
                 try:
-                    ppv = ProductPropertyValue.objects.get(property=property, product=product, type=PROPERTY_VALUE_TYPE_DEFAULT)
+                    ppv = ProductPropertyValue.objects.get(property=prop, product=product, type=PROPERTY_VALUE_TYPE_DEFAULT)
                 except ProductPropertyValue.DoesNotExist:
                     ppv_id = None
                     ppv_value = ""
+                    for lang in langs:
+                        key = 'value_%s' % lang
+                        ppv_values[key] = ""
                 else:
                     ppv_id = ppv.id
                     ppv_value = ppv.value
+                    for lang in langs:
+                        key = 'value_%s' % lang
+                        ppv_values[key] = getattr(ppv, key, '')
 
                 # Mark selected options
                 options = []
-                for option in property.options.all():
+                for option in prop.options.all():
                     if str(option.id) == ppv_value:
                         selected = True
                     else:
@@ -70,16 +80,18 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                         "selected": selected,
                     })
 
-                properties.append({
-                    "id": property.id,
-                    "name": property.name,
-                    "title": property.title,
-                    "type": property.type,
+                out_dict = {
+                    "id": prop.id,
+                    "name": prop.name,
+                    "title": prop.title,
+                    "type": prop.type,
                     "options": options,
-                    "display_text_field": property.type in (PROPERTY_TEXT_FIELD, PROPERTY_NUMBER_FIELD),
-                    "display_select_field": property.type == PROPERTY_SELECT_FIELD,
+                    "display_text_field": prop.type in (PROPERTY_TEXT_FIELD, PROPERTY_NUMBER_FIELD),
+                    "display_select_field": prop.type == PROPERTY_SELECT_FIELD,
                     "value": ppv_value,
-                })
+                }
+                out_dict.update(ppv_values)
+                properties.append(out_dict)
 
             configurables.append({
                 "id": property_group.id,
@@ -90,17 +102,18 @@ def manage_properties(request, product_id, template_name="manage/product/propert
         # Filterable
         for property_group in product.property_groups.all():
             properties = []
-            for property in property_group.properties.filter(filterable=True).order_by("groupspropertiesrelation"):
+            for prop in property_group.properties.filter(filterable=True).order_by("groupspropertiesrelation"):
 
                 display_filterables = True
+                ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=property, product=product, type=PROPERTY_VALUE_TYPE_FILTER)
+                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product, type=PROPERTY_VALUE_TYPE_FILTER)
                 value_ids = [ppv.value for ppv in ppvs]
 
                 # Mark selected options
                 options = []
-                for option in property.options.all():
+                for option in prop.options.all():
 
                     if str(option.id) in value_ids:
                         selected = True
@@ -114,25 +127,33 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     })
 
                 value = ""
-                if property.type == PROPERTY_SELECT_FIELD:
+                if prop.type == PROPERTY_SELECT_FIELD:
                     display_select_field = True
                 else:
                     display_select_field = False
                     try:
                         value = value_ids[0]
+                        # we only use translations for text fields
+                        if value_ids:
+                            ppv = ppvs[0]
+                            for lang in langs:
+                                key = 'value_%s' % lang
+                                ppv_values[key] = getattr(ppv, key, '')
                     except IndexError:
                         pass
 
-                properties.append({
-                    "id": property.id,
-                    "name": property.name,
-                    "title": property.title,
-                    "type": property.type,
+                out_dict = {
+                    "id": prop.id,
+                    "name": prop.name,
+                    "title": prop.title,
+                    "type": prop.type,
                     "options": options,
                     "value": value,
                     "display_text_field": not display_select_field,
                     "display_select_field": display_select_field,
-                })
+                }
+                out_dict.update(ppv_values)
+                properties.append(out_dict)
 
             filterables.append({
                 "id": property_group.id,
@@ -143,17 +164,18 @@ def manage_properties(request, product_id, template_name="manage/product/propert
         # Displayable
         for property_group in product.property_groups.all():
             properties = []
-            for property in property_group.properties.filter(display_on_product=True).order_by("groupspropertiesrelation"):
+            for prop in property_group.properties.filter(display_on_product=True).order_by("groupspropertiesrelation"):
 
                 display_displayables = True
+                ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=property, product=product, type=PROPERTY_VALUE_TYPE_DISPLAY)
+                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product, type=PROPERTY_VALUE_TYPE_DISPLAY)
                 value_ids = [ppv.value for ppv in ppvs]
 
                 # Mark selected options
                 options = []
-                for option in property.options.all():
+                for option in prop.options.all():
 
                     if str(option.id) in value_ids:
                         selected = True
@@ -167,25 +189,34 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     })
 
                 value = ""
-                if property.type == PROPERTY_SELECT_FIELD:
+                if prop.type == PROPERTY_SELECT_FIELD:
                     display_select_field = True
                 else:
                     display_select_field = False
                     try:
                         value = value_ids[0]
+
+                        # we only use translations for text fields
+                        if value_ids:
+                            ppv = ppvs[0]
+                            for lang in langs:
+                                key = 'value_%s' % lang
+                                ppv_values[key] = getattr(ppv, key, '')
                     except IndexError:
                         pass
 
-                properties.append({
-                    "id": property.id,
-                    "name": property.name,
-                    "title": property.title,
-                    "type": property.type,
+                out_dict = {
+                    "id": prop.id,
+                    "name": prop.name,
+                    "title": prop.title,
+                    "type": prop.type,
                     "options": options,
                     "value": value,
                     "display_text_field": not display_select_field,
                     "display_select_field": display_select_field,
-                })
+                }
+                out_dict.update(ppv_values)
+                properties.append(out_dict)
 
             displayables.append({
                 "id": property_group.id,
@@ -195,13 +226,15 @@ def manage_properties(request, product_id, template_name="manage/product/propert
 
     if product.is_variant():
         local_properties = product.parent.get_local_properties()
-        for property in local_properties:
-            try:
-                prop_val = product.property_values.get(property=property)
-                property_option = PropertyOption.objects.get(property=property, pk=prop_val.value)
-                parent_local_properties.append(property_option)
-            except (ProductPropertyValue.DoesNotExist, PropertyOption.DoesNotExist):
-                continue
+        for prop in local_properties:
+            # local properties can be defined only for variant products and they have type of PROPERTY_SELECT_FIELD
+            if prop.type == PROPERTY_SELECT_FIELD:
+                try:
+                    prop_val = product.property_values.get(property=prop)
+                    property_option = PropertyOption.objects.get(property=prop, pk=prop_val.value)
+                    parent_local_properties.append(property_option)
+                except (ProductPropertyValue.DoesNotExist, PropertyOption.DoesNotExist):
+                    continue
 
     # Generate list of all property groups; used for group selection
     product_property_group_ids = [p.id for p in product.property_groups.all()]
@@ -257,21 +290,55 @@ def update_property_groups(request, product_id):
 def update_properties(request, product_id):
     """Updates properties for product with passed id.
     """
-    type = request.POST.get("type")
-    ProductPropertyValue.objects.filter(product=product_id, type=type).delete()
+    value_type = request.POST.get("type")
+    ProductPropertyValue.objects.filter(product=product_id, type=value_type).delete()
+
+    langs = get_languages_list()
+    default_lang = langs[0]
 
     # Update property values
     for key in request.POST.keys():
-        if key.startswith("property") == False:
+        if not key.startswith("property"):
             continue
 
-        property_id = key.split("-")[1]
-        property = get_object_or_404(Property, pk=property_id)
+        # for select fields we only have one field (no translations)
+        # but for text/number fields we have translated versions of fields
+        property_parts = key.split("-")
+        is_translated = len(property_parts) > 2
+
+        if is_translated:
+            # translated field
+            lang = property_parts[1]
+            # only process default language - other translation are processed with it
+            if lang != default_lang:
+                continue
+            property_id = property_parts[2]
+        else:
+            # select field
+            property_id = property_parts[1]
+
+        prop = get_object_or_404(Property, pk=property_id)
         product = get_object_or_404(Product, pk=product_id)
 
-        for value in request.POST.getlist(key):
-            if property.is_valid_value(value):
-                ProductPropertyValue.objects.create(product=product, property=property, value=value, type=type)
+        # for select property each option is saved on its own so getlist is used
+        if is_translated:
+            values_dict = {'product': product, 'property': prop, 'type': value_type}
+            for lang in langs:
+                tkey = 'property-%s-%s' % (lang, property_id)
+                value = request.POST.get(tkey)
+                if prop.is_valid_value(value):
+                    values_dict[build_localized_fieldname('value', lang)] = value
+            else:
+                # only create PPV if all values were valid
+                ProductPropertyValue.objects.create(**values_dict)
+        else:
+            for value in request.POST.getlist(key):
+                if prop.is_valid_value(value):
+                    values_dict = {'product': product, 'property': prop, 'type': value_type}
+                    # for select field option we have only one value, so we're saving it to all translated fields
+                    for lang in langs:
+                        values_dict[build_localized_fieldname('value', lang)] = value
+                    ProductPropertyValue.objects.create(**values_dict)
 
     url = reverse("lfs_manage_product", kwargs={"product_id": product_id})
     return HttpResponseRedirect(url)

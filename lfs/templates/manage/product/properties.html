@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n lfs_modeltranslation_tags %}
 <h2>{% trans 'Property Groups' %}</h2>
 
 {% if not shop_property_groups %}
@@ -48,9 +48,18 @@
                                             {{ property.name }}:
                                         </a>
                                     </div>
-                                    <input type="text"
-                                           name="property-{{ property.id }}"
-                                           value="{{ property.value }}" />
+
+                                    {% fortranslatedattrs property "value" 1 %}
+                                        <div class="translated-field">
+                                            <div class="label">
+                                                {{ translation_language }}:
+                                            </div>
+                                            <input type="text"
+                                                   name="property-{{ translation_language }}-{{ property.id }}"
+                                                   value="{{ translated_attr|default_if_none:"" }}" />
+                                        </div>
+                                    {% endfortranslatedattrs %}
+
                                 </div>
                             {% endif %}
                             {% if property.display_select_field %}
@@ -105,9 +114,16 @@
                                             {{ property.name }}:
                                         </a>
                                     </div>
-                                    <input type="text"
-                                           name="property-{{ property.id }}"
-                                           value="{{ property.value }}" />
+                                    {% fortranslatedattrs property "value" 1 %}
+                                        <div class="translated-field">
+                                            <div class="label">
+                                                {{ translation_language }}:
+                                            </div>
+                                            <input type="text"
+                                                   name="property-{{ translation_language }}-{{ property.id }}"
+                                                   value="{{ translated_attr|default_if_none:"" }}" />
+                                        </div>
+                                    {% endfortranslatedattrs %}
                                 </div>
                             {% endif %}
                             {% if property.display_select_field %}
@@ -163,9 +179,16 @@
                                             {{ property.name }}:
                                         </a>
                                     </div>
-                                    <input type="text"
-                                           name="property-{{ property.id }}"
-                                           value="{{ property.value }}" />
+                                    {% fortranslatedattrs property "value" 1 %}
+                                        <div class="translated-field">
+                                            <div class="label">
+                                                {{ translation_language }}:
+                                            </div>
+                                            <input type="text"
+                                                   name="property-{{ translation_language }}-{{ property.id }}"
+                                                   value="{{ translated_attr|default_if_none:"" }}" />
+                                        </div>
+                                    {% endfortranslatedattrs %}
                                 </div>
                             {% endif %}
                             {% if property.display_select_field %}
