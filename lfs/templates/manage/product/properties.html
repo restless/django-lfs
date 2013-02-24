@@ -62,6 +62,21 @@
 
                                 </div>
                             {% endif %}
+                            {% if property.display_number_field %}
+                                <div class="field">
+                                    <div class="label">
+                                        <a href="{% url lfs_manage_shop_property property.id %}">
+                                            {{ property.name }}:
+                                        </a>
+                                    </div>
+
+                                    <div class="translated-field">
+                                        <input type="text"
+                                               name="property-{{ property.id }}"
+                                               value="{{ property.value }}" />
+                                    </div>
+                                </div>
+                            {% endif %}
                             {% if property.display_select_field %}
                                 <div class="field">
                                     <div class="label">

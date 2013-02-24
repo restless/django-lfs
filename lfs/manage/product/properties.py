@@ -86,7 +86,8 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     "title": prop.title,
                     "type": prop.type,
                     "options": options,
-                    "display_text_field": prop.type in (PROPERTY_TEXT_FIELD, PROPERTY_NUMBER_FIELD),
+                    "display_number_field": prop.type == PROPERTY_NUMBER_FIELD,
+                    "display_text_field": prop.type == PROPERTY_TEXT_FIELD,
                     "display_select_field": prop.type == PROPERTY_SELECT_FIELD,
                     "value": ppv_value,
                 }
@@ -149,7 +150,8 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     "type": prop.type,
                     "options": options,
                     "value": value,
-                    "display_text_field": not display_select_field,
+                    "display_number_field": prop.type == PROPERTY_NUMBER_FIELD,
+                    "display_text_field": prop.type == PROPERTY_TEXT_FIELD,
                     "display_select_field": display_select_field,
                 }
                 out_dict.update(ppv_values)
@@ -212,7 +214,8 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     "type": prop.type,
                     "options": options,
                     "value": value,
-                    "display_text_field": not display_select_field,
+                    "display_number_field": prop.type == PROPERTY_NUMBER_FIELD,
+                    "display_text_field": prop.type == PROPERTY_TEXT_FIELD,
                     "display_select_field": display_select_field,
                 }
                 out_dict.update(ppv_values)

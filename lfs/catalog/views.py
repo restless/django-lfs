@@ -338,7 +338,7 @@ def category_categories(request, category_id, start=0, template_name="lfs/catalo
 
 
 def category_products(request, category_id, start=1, template_name="lfs/catalog/categories/product/default.html"):
-    """Displays the products of the category with passed slug.
+    """Displays the products of the category with passed id.
 
     This view is called if the user chooses a template that is situated in settings.PRODUCT_PATH ".
     """
