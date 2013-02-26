@@ -284,6 +284,7 @@ def category_view(request, slug, category_id, template_name="lfs/catalog/categor
     # Set last visited category for later use, e.g. Display breadcrumbs,
     # selected menu points, etc.
     request.session["last_category"] = category
+
     if "last_manufacturer" in request.session:
         del(request.session["last_manufacturer"])
 
@@ -345,7 +346,7 @@ def category_products(request, category_id, start=1, template_name="lfs/catalog/
     # Resets the product filters if the user navigates to another category.
     # TODO: Is this what a customer would expect?
     last_category = request.session.get("last_category")
-    if (last_category is None) or (last_category.pk != category_id):
+    if (last_category is None) or (str(last_category.pk) != category_id):
         if "product-filter" in request.session:
             del request.session["product-filter"]
         if "price-filter" in request.session:
