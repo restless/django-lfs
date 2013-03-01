@@ -3,6 +3,7 @@ from django.template import Library
 from django import template
 from django.utils.safestring import mark_safe
 from django.utils import translation
+from django.utils.translation import ugettext
 
 from lfs.core.translation_utils import (get_translation_fields, build_localized_fieldname, get_languages_list,
                                         get_default_language)
@@ -49,6 +50,15 @@ class NTFieldsNode(template.Node):
 
 @register.tag(name="translatedfields")
 def do_set_translated_fields(parser, token):
+    """ Used to render form field for all defined languages:
+
+        {% translatedfiels form "name" %}
+            <div {% if translation_default_language %}class="main-language"{% endif %}>
+                {{ translated_field.label_tag }}
+                {{ translated_field }}
+            </div>
+        {% endtranslatedfiels %}
+    """
     try:
         # split_contents() knows not to split quoted strings.
         tag_name, form, field_name = token.split_contents()
@@ -149,6 +159,11 @@ class SwitchLanguageNode(template.Node):
 
 @register.tag(name="switchlanguage")
 def do_switch_language(parser, token):
+    """ Switch language within tag.
+        {% switchlanguage "en" %}
+            {% trans "blah" %}
+        {% endswitchlanguage %}
+    """
     try:
         # split_contents() knows not to split quoted strings.
         tag_name, language_code = token.split_contents()
@@ -157,6 +172,54 @@ def do_switch_language(parser, token):
     nodelist = parser.parse(('endswitchlanguage',))
     parser.delete_first_token()
     return SwitchLanguageNode(language_code, nodelist)
+
+
+class NTLanguagesNode(template.Node):
+    def __init__(self, nodelist):
+        self.request = template.Variable('request')
+        self.nodelist = nodelist
+
+    def render(self, context):
+        """ render in context of all available languages
+        """
+        default_language = get_default_language()
+        current_language = translation.get_language()
+
+        output = []
+        langs_list = get_languages_list()
+        out = []
+        for i, lang in enumerate(langs_list):
+            ctx = dict(translation_language=lang)
+            if lang == default_language:
+                ctx['translation_default_language'] = True
+            out.append(ctx)
+
+        last = len(out) - 1
+        for i, ctx in enumerate(out):
+            out[i]['forlanguagesloop'] = {'last': i == last, 'first': i == 0, 'count': i}
+        for ctx in out:
+            translation.activate(ctx['translation_language'])
+            context.update(ctx)
+            output.append(self.nodelist.render(context))
+        translation.activate(current_language)
+        return ''.join(output)
+
+
+@register.tag(name="forlanguages")
+def do_for_languages(parser, token):
+    """ Iterates through all lanuages and switches context language for each run:
+        {% forlanguages %}
+           <div>{% trans "I'll be show in all languages" %}</div>
+        {% endforlanguages %}
+    """
+    try:
+        # split_contents() knows not to split quoted strings.
+        tag_name = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError("%r tag takes no arguments" % token.contents.split()[0])
+    nodelist = parser.parse(('endforlanguages',))
+    parser.delete_first_token()
+    return NTLanguagesNode(nodelist)
 
 
 @register.simple_tag

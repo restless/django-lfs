@@ -86,7 +86,7 @@ urlpatterns += patterns('lfs.manufacturer.views',
 
 # Page
 urlpatterns += patterns('lfs.page.views',
-    url(r'^page/(?P<slug>[-\w]+)-i(?P<page_id>\d+)$', "page_view", name="lfs_page_view"),
+    url(r'^page/(?P<slug>[-\w]*)-i(?P<page_id>\d+)$', "page_view", name="lfs_page_view"),
     url(r'^pages/$', "pages_view", name="lfs_pages"),
     url(r'^popup/(?P<slug>[-\w]*)$', "popup_view", name="lfs_popup_view"),
 )
