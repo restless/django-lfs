@@ -7,10 +7,12 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.forms.util import ErrorList
 from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
 
 # lfs imports
+from lfs.core.translation_utils import uses_modeltranslation
 import lfs.payment.settings
-from lfs.customer.models import BankAccount
+from lfs.customer.models import BankAccount, PreferredLanguage
 from lfs.customer.models import CreditCard
 from lfs.payment.models import PaymentMethod
 
@@ -99,6 +101,13 @@ class RegisterForm(forms.Form):
         label=_(u"Password"), widget=forms.PasswordInput(), max_length=20)
     password_2 = forms.CharField(
         label=_(u"Confirm password"), widget=forms.PasswordInput(), max_length=20)
+    preferred_language = forms.ChoiceField(label=_('Preferred language'), choices=settings.LANGUAGES,
+                                               help_text=_('Language used in notification e-mails'))
+
+    def __init(self):
+        super(RegisterForm, self).__init__()
+        if not uses_modeltranslation():
+            del self.fields['preferred_language']
 
     def clean_password_2(self):
         """Validates that password 1 and password 2 are the same.
@@ -120,3 +129,16 @@ class RegisterForm(forms.Form):
                 _(u"That email address is already in use."))
 
         return email
+
+
+class PreferredLanguageForm(forms.ModelForm):
+    """Form to edit bank account
+    """
+    def __init__(self, *args, **kwargs):
+        super(PreferredLanguageForm, self).__init__(*args, **kwargs)
+        self.fields['language'].choices = settings.LANGUAGES
+        self.fields['language'].widget = forms.Select(choices=settings.LANGUAGES)
+
+    class Meta:
+        model = PreferredLanguage
+        fields = ("language", )

@@ -7,6 +7,7 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 
 # portlets
+from django.utils import translation
 from portlets.models import Portlet
 
 # lfs imports
@@ -40,7 +41,9 @@ class CategoriesPortlet(Portlet):
         else:
             object_id = object.id
 
-        cache_key = "%s-categories-portlet-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, object.__class__.__name__, object_id)
+        cache_key = "%s-categories-portlet-%s-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
+                                                        object.__class__.__name__,
+                                                        object_id, translation.get_language())
         result = cache.get(cache_key)
         if result is not None:
             return result

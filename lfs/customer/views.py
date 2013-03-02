@@ -3,6 +3,7 @@ import datetime
 from urlparse import urlparse
 
 # django imports
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import PasswordChangeForm
@@ -12,14 +13,16 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.utils import translation
 from django.utils.translation import ugettext_lazy as _
 
 # lfs imports
 import lfs
 from lfs.addresses.utils import AddressManagement
+from lfs.core.translation_utils import uses_modeltranslation
 from lfs.customer import utils as customer_utils
-from lfs.customer.forms import EmailForm
-from lfs.customer.forms import RegisterForm
+from lfs.customer.forms import EmailForm, PreferredLanguageForm, RegisterForm
+from lfs.customer.models import PreferredLanguage
 from lfs.order.models import Order
 
 
@@ -74,6 +77,10 @@ def login(request, template_name="lfs/customer/login.html"):
             # Create customer
             customer = customer_utils.get_or_create_customer(request)
             customer.user = user
+            lang = translation.get_language()
+            if uses_modeltranslation():
+                lang = register_form.data.get("preferred_language")
+            PreferredLanguage.objects.create(user=user, language=lang)
 
             # Notify
             lfs.core.signals.customer_added.send(user)
@@ -167,6 +174,7 @@ def orders(request, template_name="lfs/customer/orders.html"):
         "orders": orders,
         "options": options,
         "date_filter": date_filter,
+        'uses_modeltranslation': uses_modeltranslation()
     }))
 
 
@@ -180,6 +188,7 @@ def order(request, id, template_name="lfs/customer/order.html"):
     return render_to_response(template_name, RequestContext(request, {
         "current_order": order,
         "orders": orders,
+        'uses_modeltranslation': uses_modeltranslation()
     }))
 
 
@@ -191,6 +200,7 @@ def account(request, template_name="lfs/customer/account.html"):
 
     return render_to_response(template_name, RequestContext(request, {
         "user": user,
+        'uses_modeltranslation': uses_modeltranslation()
     }))
 
 
@@ -222,6 +232,7 @@ def addresses(request, template_name="lfs/customer/addresses.html"):
         template_name, RequestContext(request, {
             "shipping_address_inline": sam.render(request),
             "invoice_address_inline": iam.render(request),
+            'uses_modeltranslation': uses_modeltranslation()
         }),
         msg=msg,
     )
@@ -241,7 +252,8 @@ def email(request, template_name="lfs/customer/email.html"):
         email_form = EmailForm(initial={"email": request.user.email})
 
     return render_to_response(template_name, RequestContext(request, {
-        "email_form": email_form
+        "email_form": email_form,
+        'uses_modeltranslation': uses_modeltranslation()
     }))
 
 
@@ -258,5 +270,26 @@ def password(request, template_name="lfs/customer/password.html"):
         form = PasswordChangeForm(request.user)
 
     return render_to_response(template_name, RequestContext(request, {
-        "form": form
+        "form": form,
+        'uses_modeltranslation': uses_modeltranslation()
+    }))
+
+
+@login_required
+def preferred_language(request, template_name="lfs/customer/preferred_language.html"):
+    """Saves the email address from the data form.
+    """
+    preferred_language, created = PreferredLanguage.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        lang_form = PreferredLanguageForm(data=request.POST, instance=preferred_language)
+        if lang_form.is_valid():
+            lang_form.save()
+            messages.info(request, 'Language changed')
+            return HttpResponseRedirect(reverse("lfs_preferred_language"))
+    else:
+        lang_form = PreferredLanguageForm(instance=preferred_language)
+
+    return render_to_response(template_name, RequestContext(request, {
+        "lang_form": lang_form,
+        'uses_modeltranslation': uses_modeltranslation()
     }))

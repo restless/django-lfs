@@ -76,6 +76,7 @@ urlpatterns += patterns('lfs.customer.views',
     url(r'^my-orders', "orders", name="lfs_my_orders"),
     url(r'^my-order/(?P<id>\d+)', "order", name="lfs_my_order"),
     url(r'^my-password', "password", name="lfs_my_password"),
+    url(r'^preferred-language', "preferred_language", name="lfs_preferred_language"),
 )
 
 # Manufacturers

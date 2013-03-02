@@ -6,6 +6,7 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 
 # portlets imports
+from django.utils import translation
 from portlets.models import Portlet
 
 # lfs imports
@@ -26,7 +27,7 @@ class PagesPortlet(Portlet):
         """
         request = context.get("request")
 
-        cache_key = "%s-pages" % settings.CACHE_MIDDLEWARE_KEY_PREFIX
+        cache_key = "%s-%s-pages" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, translation.get_language())
         pages = cache.get(cache_key)
         if pages is None:
             pages = Page.objects.filter(active=True, exclude_from_navigation=False)

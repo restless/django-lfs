@@ -3,8 +3,8 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
-
+from django.utils.translation import ugettext_lazy as _, check_for_language
+from django.conf import settings
 
 # lfs imports
 from lfs.core.models import Country
@@ -136,3 +136,20 @@ class CreditCard(models.Model):
 
     def __unicode__(self):
         return "%s / %s" % (self.type, self.owner)
+
+
+class PreferredLanguage(models.Model):
+    user = models.OneToOneField(User, verbose_name=_(u"Customer"), blank=False, null=False,
+                                related_name="preferred_language")
+    language = models.CharField(_('Preferred language'), max_length=5, default=settings.LANGUAGE_CODE)
+
+    def __unicode__(self):
+        return self.get_preferred_language()
+
+    def get_preferred_language(self):
+        if check_for_language(self.language):
+            return self.language
+        else:
+            self.language = settings.LANGUAGE_CODE
+            self.save()
+            return settings.LANGUAGE_CODE

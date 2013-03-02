@@ -383,6 +383,13 @@ $(function() {
             update_html(data);
         });
     });
+
+    $('body').on('click', 'a.language-switch', function(){
+        var lang = $(this).data('language');
+        $('#locale-switcher-input').val(lang);
+        $('#locale_switcher').submit();
+        return false;
+    });
 })
 
 $(document).ajaxSend(function(event, xhr, settings) {

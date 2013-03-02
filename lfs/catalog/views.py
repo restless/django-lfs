@@ -14,7 +14,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.template.loader import render_to_string
-from django.utils import simplejson
+from django.utils import simplejson, translation
 from django.utils.translation import ugettext_lazy as _, ungettext
 
 # lfs imports
@@ -303,7 +303,8 @@ def category_categories(request, category_id, start=0, template_name="lfs/catalo
 
     This view is called if the user chooses a template that is situated in settings.CATEGORY_PATH ".
     """
-    cache_key = "%s-category-categories-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, slug)
+    cache_key = "%s-category-categories-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, category_id,
+                                                  translation.get_lanugage())
 
     result = cache.get(cache_key)
     if result is not None:
@@ -361,8 +362,9 @@ def category_products(request, category_id, start=1, template_name="lfs/catalog/
     product_filter = request.session.get("product-filter", {})
     product_filter = product_filter.items()
 
-    cache_key = "%s-category-products-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, category_id)
-    sub_cache_key = "%s-start-%s-sorting-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, start, sorting)
+    lang = translation.get_language()
+    cache_key = "%s-category-products-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, category_id, lang)
+    sub_cache_key = "%s-start-%s-sorting-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, start, sorting, lang)
 
     filter_key = ["%s-%s" % (i[0], i[1]) for i in product_filter]
     if filter_key:
@@ -494,7 +496,8 @@ def product_inline(request, product, template_name="lfs/catalog/products/product
     This is factored out to be able to better cached and in might in future used
     used to be updated via ajax requests.
     """
-    cache_key = "%s-product-inline-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, request.user.is_superuser, product.id)
+    cache_key = "%s-product-inline-%s-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, request.user.is_superuser,
+                                                product.id, translation.get_language())
     result = cache.get(cache_key)
     if result is not None:
         return result

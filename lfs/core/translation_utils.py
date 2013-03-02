@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from contextlib import contextmanager
+
 from django.conf import settings
 from django.forms.models import fields_for_model
+from django.utils import translation
 
 try:
     from localeurl.models import reverse
@@ -95,3 +98,22 @@ def lfs_reverse(*args, **kwargs):
     if not 'localeurl' in settings.INSTALLED_APPS:
         del kwargs['locale']
     return reverse(*args, **kwargs)
+
+
+@contextmanager
+def customer_language(user):
+    from lfs.customer.models import Customer, PreferredLanguage
+
+    try:
+        customer = Customer.objects.get(user=user)
+        customer.user.preferred_language
+    except (PreferredLanguage.DoesNotExist, Customer.DoesNotExist):
+        customer = None
+
+    curr_language = translation.get_language()
+
+    if customer:
+        translation.activate(customer.user.preferred_language.get_preferred_language())
+    yield
+    if customer:
+        translation.activate(curr_language)
