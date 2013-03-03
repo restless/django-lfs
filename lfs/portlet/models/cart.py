@@ -45,11 +45,5 @@ class CartPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import CartPortletForm
         return CartPortletForm(instance=self, **kwargs)
-
-
-class CartPortletForm(forms.ModelForm):
-    """Form for CartPortlet.
-    """
-    class Meta:
-        model = CartPortlet

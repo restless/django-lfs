@@ -38,11 +38,6 @@ class AverageRatingPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import AverageRatingForm
         return AverageRatingForm(instance=self, **kwargs)
 
-
-class AverageRatingForm(forms.ModelForm):
-    """Form for the AverageRatingPortlet.
-    """
-    class Meta:
-        model = AverageRatingPortlet

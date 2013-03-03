@@ -30,11 +30,5 @@ class TextPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import TextPortletForm
         return TextPortletForm(instance=self, **kwargs)
-
-
-class TextPortletForm(forms.ModelForm):
-    """Form for the TextPortlet.
-    """
-    class Meta:
-        model = TextPortlet

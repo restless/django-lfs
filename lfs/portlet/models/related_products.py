@@ -28,11 +28,6 @@ class RelatedProductsPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import RelatedProductsForm
         return RelatedProductsForm(instance=self, **kwargs)
 
-
-class RelatedProductsForm(forms.ModelForm):
-    """Form for the RelatedProductsPortlet.
-    """
-    class Meta:
-        model = RelatedProductsPortlet

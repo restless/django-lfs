@@ -51,11 +51,5 @@ class RecentProductsPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import RecentProductsForm
         return RecentProductsForm(instance=self, **kwargs)
-
-
-class RecentProductsForm(forms.ModelForm):
-    """Form for the RecentProductsPortlet.
-    """
-    class Meta:
-        model = RecentProductsPortlet

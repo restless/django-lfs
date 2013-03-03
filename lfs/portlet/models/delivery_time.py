@@ -41,11 +41,5 @@ class DeliveryTimePortlet(Portlet):
         return render_to_string("lfs/portlets/delivery_time.html", RequestContext(request, d))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import DeliveryTimeForm
         return DeliveryTimeForm(instance=self, **kwargs)
-
-
-class DeliveryTimeForm(forms.ModelForm):
-    """
-    """
-    class Meta:
-        model = DeliveryTimePortlet

@@ -39,11 +39,6 @@ class PagesPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import PagesForm
         return PagesForm(instance=self, **kwargs)
 
-
-class PagesForm(forms.ModelForm):
-    """Form for the PagesPortlet.
-    """
-    class Meta:
-        model = PagesPortlet

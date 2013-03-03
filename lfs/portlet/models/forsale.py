@@ -60,14 +60,9 @@ class ForsalePortlet(Portlet):
     def form(self, **kwargs):
         """
         """
+        from lfs.portlet.forms import ForsaleForm
         return ForsaleForm(instance=self, **kwargs)
 
     def __unicode__(self):
         return "%s" % self.id
 
-
-class ForsaleForm(forms.ModelForm):
-    """
-    """
-    class Meta:
-        model = ForsalePortlet

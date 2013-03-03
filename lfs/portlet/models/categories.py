@@ -65,11 +65,6 @@ class CategoriesPortlet(Portlet):
         return result
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import CategoriesPortletForm
         return CategoriesPortletForm(instance=self, **kwargs)
 
-
-class CategoriesPortletForm(forms.ModelForm):
-    """Form for CategoriesPortlet.
-    """
-    class Meta:
-        model = CategoriesPortlet

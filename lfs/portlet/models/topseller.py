@@ -45,11 +45,6 @@ class TopsellerPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import TopsellerForm
         return TopsellerForm(instance=self, **kwargs)
 
-
-class TopsellerForm(forms.ModelForm):
-    """Form for the TopsellerPortlet.
-    """
-    class Meta:
-        model = TopsellerPortlet

@@ -200,7 +200,7 @@ $(function() {
     });
 
     // Generic ajax link
-    $(".ajax-link").live("click", function() {
+    $("body").on("click", ".ajax-link", function() {
         var url = $(this).attr("href");
         $.post(url, function(data) {
             data = $.parseJSON(data);
@@ -276,22 +276,59 @@ $(function() {
     });
 
     // Portlets
-    $(".portlet-edit-button").live("click", function() {
+    $("body").on("click", ".portlet-edit-button", function() {
         var url = $(this).attr("href");
         $.get(url, function(data) {
             $("#dialog").html(data);
             $("#dialog").dialog("open");
-            addEditor('#id_portlet-text', true, 300);
+
+            // translated fields
+            $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
+                var obj = $("#id_portlet-text_" + lang);
+                if (obj.length > 0){
+                    if (typeof(tinyMCE) != 'undefined' && '' + obj.tinymce() != 'undefined'){
+                        obj.tinymce().remove();
+                    }
+                    addEditor("#id_portlet-text_" + lang, true, 150);
+                }
+            });
+
+            // not translated fields
+            if (typeof(tinyMCE) != 'undefined'){
+                var obj = $("#id_portlet-text");
+                if (obj.length > 0){
+                    obj.tinymce().remove();
+                }
+            }
+            addEditor('#id_portlet-text', true, 150);
         });
         return false;
     });
 
-    $(".portlet-add-button").live("click", function() {
+    $(".portlet-add-button").on("click", function() {
         $(this).parents("form:first").ajaxSubmit({
             success : function(data) {
                 $("#dialog").html(data);
                 $("#dialog").dialog("open");
-                addEditor('#id_portlet-text', true, 300);
+                // translated fields
+                $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
+                    var obj = $("#id_portlet-text_" + lang);
+                    if (obj.length > 0){
+                        if (typeof(tinyMCE) != 'undefined' && '' + obj.tinymce() != 'undefined'){
+                            obj.tinymce().remove();
+                        }
+                        addEditor("#id_portlet-text_" + lang, true, 150);
+                    }
+                });
+
+                // not translated fields
+                if (typeof(tinyMCE) != 'undefined'){
+                    var obj = $("#id_portlet-text");
+                    if (obj.length > 0){
+                        obj.tinymce().remove();
+                    }
+                }
+                addEditor('#id_portlet-text', true, 150);
         }});
         return false;
     });

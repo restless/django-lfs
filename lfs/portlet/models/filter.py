@@ -67,11 +67,5 @@ class FilterPortlet(Portlet):
         }))
 
     def form(self, **kwargs):
+        from lfs.portlet.forms import FilterPortletForm
         return FilterPortletForm(instance=self, **kwargs)
-
-
-class FilterPortletForm(forms.ModelForm):
-    """Form for the FilterPortlet.
-    """
-    class Meta:
-        model = FilterPortlet
