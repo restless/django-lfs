@@ -17,8 +17,8 @@ class CountryAdmin(TranslationAdmin):
     pass
 
 admin.site.register(Country, CountryAdmin)
+admin.site.register(ActionGroup, ActionGroupAdmin)
 
 admin.site.register(Shop)
 admin.site.register(Action)
-admin.site.register(ActionGroup)
-admin.site.register(Country)
+
