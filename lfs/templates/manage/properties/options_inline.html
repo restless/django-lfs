@@ -27,7 +27,7 @@
                 {% translatedfields form "name" %}
                     <div class="translated-field">
                         {{ translated_field.errors }}
-                        <div class="label">{{ translation_language }}:</div> {{ translated_field }}
+                        {% if uses_modeltranslation %}<div class="label">{{ translation_language }}:</div> {% endif %}{{ translated_field }}
                     </div>
                 {% endtranslatedfields %}
             </td>
@@ -59,7 +59,7 @@
                     {% translatedfields form "name" %}
                         <div class="translated-field">
                             {{ translated_field.errors }}
-                            <div class="label">{{ translation_language }}:</div> {{ translated_field }}
+                            {% if uses_modeltranslation %}<div class="label">{{ translation_language }}:</div> {% endif %}{{ translated_field }}
                         </div>
                     {% endtranslatedfields %}
                 </td>

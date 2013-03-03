@@ -1,6 +1,6 @@
 try:
     from modeltranslation.translator import translator, TranslationOptions
-    from .models import Action, Country
+    from .models import Action, Country, Shop
 
 
     class ActionTranslationOptions(TranslationOptions):
@@ -11,6 +11,9 @@ try:
     class CountryTranslationOptions(TranslationOptions):
         fields = ('name', )
 
-    translator.register(Country, CountryTranslationOptions)
+    class ShopTranslationOptions(TranslationOptions):
+        fields = ('name', 'description', 'image', 'meta_title', 'meta_keywords', 'meta_description')
+
+    translator.register(Shop, ShopTranslationOptions)
 except ImportError:
     pass

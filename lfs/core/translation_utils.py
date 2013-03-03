@@ -65,6 +65,11 @@ def prepare_fields_order(form, fields=None, exclude=None):
             for field in fields:
                 if field not in trans_dict:
                     out.append(field)
+    else:
+        if fields:
+            out = list(fields)
+        else:
+            out = all_fields[:]
 
     for field in exclude:
         out.remove(field)
@@ -74,6 +79,7 @@ def prepare_fields_order(form, fields=None, exclude=None):
             form.fields.pop(field)
 
     form.fields.keyOrder = out
+
     return out
 
 
@@ -95,7 +101,7 @@ def get_default_language():
 
 
 def lfs_reverse(*args, **kwargs):
-    if not 'localeurl' in settings.INSTALLED_APPS:
+    if not 'localeurl' in settings.INSTALLED_APPS and 'locale' in kwargs:
         del kwargs['locale']
     return reverse(*args, **kwargs)
 

@@ -6,7 +6,7 @@ from django.utils import translation
 from django.utils.translation import ugettext
 
 from lfs.core.translation_utils import (get_translation_fields, build_localized_fieldname, get_languages_list,
-                                        get_default_language)
+                                        get_default_language, uses_modeltranslation)
 
 register = Library()
 
@@ -29,6 +29,8 @@ class NTFieldsNode(template.Node):
 
         default_language = get_default_language()
 
+        uses_translation = uses_modeltranslation()
+
         output = []
         for lang in get_languages_list():
             tname = build_localized_fieldname(field_name, lang)
@@ -36,6 +38,7 @@ class NTFieldsNode(template.Node):
             context['translation_language'] = lang
             if lang == default_language:
                 context['translation_default_language'] = True
+                context['uses_modeltranlsation'] = uses_translation
                 setattr(context['translated_field'], 'default_language', True)
                 attrs = context['translated_field'].field.widget.attrs
                 if not attrs:
@@ -85,6 +88,7 @@ class NTAttrsNode(template.Node):
         show_empty = self.show_empty.resolve(context)
 
         default_language = get_default_language()
+        uses_translation = uses_modeltranslation()
 
         output = []
         langs_list = get_languages_list()
@@ -101,6 +105,7 @@ class NTAttrsNode(template.Node):
             ctx['translation_language'] = lang
             if lang == default_language:
                 ctx['translation_default_language'] = True
+            ctx['uses_modeltranlsation'] = uses_translation
             out.append(ctx)
 
         last = len(out) - 1
@@ -227,3 +232,7 @@ def get_translation_languages_js():
     langlist = ','.join(["'%s'" % lang for lang in get_languages_list()])
     return mark_safe('var TRANSLATION_LANGUAGES = [%s];' % langlist)
 
+
+@register.inclusion_tag('lfs/shop/_language_switch_menu.html')
+def language_switch_menu():
+    return {'uses_modeltranslation': uses_modeltranslation()}

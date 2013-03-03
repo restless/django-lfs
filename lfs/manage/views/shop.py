@@ -11,6 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_POST
 
 # lfs imports
+from lfs.core.translation_utils import prepare_fields_order, get_translation_fields
 import lfs.core.utils
 from lfs.caching.utils import lfs_get_object_or_404
 from lfs.core.models import Shop
@@ -34,13 +35,16 @@ class ShopDataForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(ShopDataForm, self).__init__(*args, **kwargs)
-        self.fields["image"].widget = LFSImageInput()
+        fields = ("name", "shop_owner", "from_email", "notification_emails",
+                  "description", "image", "static_block", "checkout_type", "confirm_toc",
+                  "google_analytics_id", "ga_site_tracking", "ga_ecommerce_tracking")
+        prepare_fields_order(self, fields=fields)
+
+        for fname in get_translation_fields("image"):
+            self.fields[fname].widget = LFSImageInput()
 
     class Meta:
         model = Shop
-        fields = ("name", "shop_owner", "from_email", "notification_emails",
-            "description", "image", "static_block", "checkout_type", "confirm_toc",
-            "google_analytics_id", "ga_site_tracking", "ga_ecommerce_tracking")
 
 
 class ShopDefaultValuesForm(ModelForm):
