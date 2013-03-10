@@ -102,10 +102,10 @@ class RegisterForm(forms.Form):
     password_2 = forms.CharField(
         label=_(u"Confirm password"), widget=forms.PasswordInput(), max_length=20)
     preferred_language = forms.ChoiceField(label=_('Preferred language'), choices=settings.LANGUAGES,
-                                               help_text=_('Language used in notification e-mails'))
+                                           help_text=_('Language used in notification e-mails'))
 
-    def __init(self):
-        super(RegisterForm, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(RegisterForm, self).__init__(*args, **kwargs)
         if not uses_modeltranslation():
             del self.fields['preferred_language']
 

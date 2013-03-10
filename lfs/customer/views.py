@@ -80,7 +80,7 @@ def login(request, template_name="lfs/customer/login.html"):
             lang = translation.get_language()
             if uses_modeltranslation():
                 lang = register_form.data.get("preferred_language")
-            PreferredLanguage.objects.create(user=user, language=lang)
+                PreferredLanguage.objects.create(user=user, language=lang)
 
             # Notify
             lfs.core.signals.customer_added.send(user)
