@@ -1,4 +1,6 @@
-try:
+from lfs.core.translation_utils import uses_modeltranslation
+
+if uses_modeltranslation():
     from modeltranslation.translator import translator, TranslationOptions
     from .models import Category, DeliveryTime, Product, StaticBlock, Property, PropertyOption, ProductPropertyValue
 
@@ -43,5 +45,3 @@ try:
         fields = ('value', )
 
     translator.register(ProductPropertyValue, ProductPropertyValueTranslationOptions)
-except ImportError:
-    pass

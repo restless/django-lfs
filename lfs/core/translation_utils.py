@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 
 from django.conf import settings
+from django.contrib.admin import ModelAdmin
 from django.forms.models import fields_for_model
 from django.utils import translation
 
@@ -31,12 +32,16 @@ def uses_modeltranslation():
 
 AVAILABLE_LANGUAGES = [language[0] for language in settings.LANGUAGES]
 
+LFSTranslationAdmin = ModelAdmin
+
 if uses_modeltranslation():
     try:
         from modeltranslation.utils import get_translation_fields, build_localized_fieldname
         from modeltranslation.manager import get_translatable_fields_for_model
         from modeltranslation import settings as modeltranslation_settings
         AVAILABLE_LANGUAGES = modeltranslation_settings.AVAILABLE_LANGUAGES
+        from modeltranslation.admin import TranslationAdmin
+        LFSTranslationAdmin = TranslationAdmin
     except ImportError:
         pass
 
@@ -49,6 +54,7 @@ def prepare_fields_order(form, fields=None, exclude=None):
         fields = ['slug_en', 'slug_de', 'name_en', 'name_de', 'is_active']
     """
     all_fields = fields_for_model(form.instance).keys()
+
     trans_dict = get_translatable_fields_for_model(form.instance.__class__)
     out = []  # sort order
 

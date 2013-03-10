@@ -1,19 +1,18 @@
 # django imports
 from django.contrib import admin
 
-from modeltranslation.admin import TranslationAdmin
-
 # lfs imports
 from lfs.core.models import Action
 from lfs.core.models import ActionGroup
 from lfs.core.models import Shop
 from lfs.core.models import Country
+from lfs.core.translation_utils import LFSTranslationAdmin
 
 
-class ActionGroupAdmin(TranslationAdmin):
+class ActionGroupAdmin(LFSTranslationAdmin):
     pass
 
-class CountryAdmin(TranslationAdmin):
+class CountryAdmin(LFSTranslationAdmin):
     pass
 
 admin.site.register(Country, CountryAdmin)

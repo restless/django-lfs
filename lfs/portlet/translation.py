@@ -1,4 +1,6 @@
-try:
+from lfs.core.translation_utils import uses_modeltranslation
+
+if uses_modeltranslation():
     from modeltranslation.translator import translator, TranslationOptions
     from .models import TextPortlet, AverageRatingPortlet, CartPortlet, CategoriesPortlet, DeliveryTimePortlet,\
         FeaturedPortlet, FilterPortlet, ForsalePortlet, LatestPortlet, PagesPortlet, RecentProductsPortlet,\
@@ -69,6 +71,3 @@ try:
     class TopsellerPortletTranslationOptions(TranslationOptions):
         fields = ('title', )
     translator.register(TopsellerPortlet, TopsellerPortletTranslationOptions)
-
-except ImportError:
-    pass

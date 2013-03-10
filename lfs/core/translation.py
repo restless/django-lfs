@@ -1,4 +1,6 @@
-try:
+from lfs.core.translation_utils import uses_modeltranslation
+
+if uses_modeltranslation():
     from modeltranslation.translator import translator, TranslationOptions
     from .models import Action, Country, Shop, ActionGroup
 
@@ -17,5 +19,3 @@ try:
     class ActionGroupTranslationOptions(TranslationOptions):
         fields = ('name', )
     translator.register(ActionGroup, ActionGroupTranslationOptions)
-except ImportError:
-    pass

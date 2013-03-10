@@ -1,4 +1,6 @@
-try:
+from lfs.core.translation_utils import uses_modeltranslation
+
+if uses_modeltranslation():
     from modeltranslation.translator import translator, TranslationOptions
     from .models import ShippingMethod
 
@@ -7,5 +9,3 @@ try:
         fields = ('name', 'description', 'note')
 
     translator.register(ShippingMethod, ShippingMethodTranslationOptions)
-except ImportError:
-    pass
