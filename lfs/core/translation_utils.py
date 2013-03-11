@@ -118,7 +118,10 @@ def customer_language(user):
 
     try:
         customer = Customer.objects.get(user=user)
-        customer.user.preferred_language
+        if customer.user:
+            customer.user.preferred_language
+        else:
+            customer = None
     except (PreferredLanguage.DoesNotExist, Customer.DoesNotExist):
         customer = None
 

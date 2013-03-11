@@ -215,7 +215,10 @@ def set_price_filter(request, category_id):
 
     request.session["price-filter"] = {"min": min_price, "max": max_price}
 
-    url = Category.objects.get(pk=category_id).get_absolute_url()
+    try:
+        url = Category.objects.get(pk=category_id).get_absolute_url()
+    except Category.DoesNotExist:
+        url = reverse('lfs_shop_view')
     return HttpResponseRedirect(url)
 
 
@@ -304,7 +307,7 @@ def category_categories(request, category_id, start=0, template_name="lfs/catalo
     This view is called if the user chooses a template that is situated in settings.CATEGORY_PATH ".
     """
     cache_key = "%s-category-categories-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, category_id,
-                                                  translation.get_lanugage())
+                                                  translation.get_language())
 
     result = cache.get(cache_key)
     if result is not None:

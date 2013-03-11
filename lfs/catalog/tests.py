@@ -835,7 +835,7 @@ class CategoryTestCase(TestCase):
     def test_get_absolute_url(self):
         """
         """
-        self.assertEqual(self.c1.get_absolute_url(), "/category-%s" % self.c1.slug)
+        self.assertEqual(self.c1.get_absolute_url(), "/category-%s-i%s" % (self.c1.slug, self.c1.pk))
 
     def test_unicode(self):
         """
@@ -1052,7 +1052,7 @@ class ViewsTestCase(TestCase):
         request = RequestFactory().get("/")
         request.session = SessionStore()
 
-        result = set_price_filter(request, "test")
+        result = set_price_filter(request, 1)
         self.assertEqual(result.status_code, 302)
         self.assertEqual(request.session["price-filter"]["min"], "0")
         self.assertEqual(request.session["price-filter"]["max"], "99999")
@@ -1060,7 +1060,7 @@ class ViewsTestCase(TestCase):
         request = RequestFactory().get("/", {"min": 0, "max": 100})
         request.session = SessionStore()
 
-        result = set_price_filter(request, "test")
+        result = set_price_filter(request, 1)
         self.assertEqual(result.status_code, 302)
         self.assertEqual(request.session["price-filter"]["min"], "0")
         self.assertEqual(request.session["price-filter"]["max"], "100")
@@ -1068,12 +1068,12 @@ class ViewsTestCase(TestCase):
         request = RequestFactory().get("/", {"min": "A", "max": "B"})
         request.session = SessionStore()
 
-        result = set_price_filter(request, "test")
+        result = set_price_filter(request, 1)
         self.assertEqual(result.status_code, 302)
         self.assertEqual(request.session["price-filter"]["min"], "0")
         self.assertEqual(request.session["price-filter"]["max"], "0")
 
-        result = reset_price_filter(request, "test")
+        result = reset_price_filter(request, 1)
         self.assertEqual(result.status_code, 302)
         self.failIf("price-filter" in request.session.keys())
 
@@ -1137,11 +1137,13 @@ class ViewsTestCase(TestCase):
         request = RequestFactory().post("/", {"product_id": "1"})
         request.session = SessionStore()
 
-        result = set_filter(request, "category-1", property_id=1, value="value-1")
+        category = Category.objects.get(slug="category-1")
+
+        result = set_filter(request, category.pk, property_id=1, value="value-1")
         self.assertEqual(result.status_code, 302)
         self.assertEqual(request.session.get("product-filter")[1], "value-1")
 
-        result = set_filter(request, "category-1", property_id=1, min="0", max="999")
+        result = set_filter(request, category.pk, property_id=1, min="0", max="999")
         self.assertEqual(result.status_code, 302)
         self.assertEqual(request.session.get("product-filter")[1], ("0", "999"))
 
