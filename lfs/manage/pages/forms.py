@@ -29,10 +29,10 @@ class PageAddForm(ModelForm):
         """ If translations are used then at least one title and one slug are required
         """
         cleaned_data = super(PageAddForm, self).clean()
-        slug_fields = get_translation_fields('slug')
 
         # at least one name and one slug has to be defined
         if uses_modeltranslation():
+            slug_fields = get_translation_fields('slug')
             title_fields = get_translation_fields('title')
 
             values_title = [self.cleaned_data.get(trans_name, '') for trans_name in title_fields]
@@ -44,18 +44,17 @@ class PageAddForm(ModelForm):
             if not any(values_slug):
                 raise ValidationError(_('At least one slug has to be defined'))
 
-        # check for uniqueness
-        for fname in slug_fields:
-            val = self.cleaned_data.get(fname).strip()
-            if val:
-                qs = self._meta.model.objects.filter(**{fname: val})
-                if self.instance.pk:
-                    qs = qs.exclude(pk=self.instance.pk)
-                if qs.exists():
-                    msg = _(u"Slug '%s' already exists!") % val
-                    self._errors[fname] = self.error_class([msg])
-                    del cleaned_data[fname]
-
+            # check for uniqueness
+            for slug_field_name in slug_fields:
+                val = self.cleaned_data.get(slug_field_name).strip()
+                if val:
+                    qs = self._meta.model.objects.filter(**{slug_field_name: val})
+                    if self.instance.pk:
+                        qs = qs.exclude(pk=self.instance.pk)
+                    if qs.exists():
+                        msg = _(u"Slug '%s' already exists!") % val
+                        self._errors[slug_field_name] = self.error_class([msg])
+                        del cleaned_data[slug_field_name]
         return cleaned_data
 
     class Meta:
