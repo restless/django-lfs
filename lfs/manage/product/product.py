@@ -84,7 +84,9 @@ class ProductAddForm(forms.ModelForm):
 
         # check for uniqueness
         for fname in slug_fields:
-            val = self.cleaned_data.get(fname).strip()
+            val = self.cleaned_data.get(fname)
+            if not val is None:
+                val = val.strip()
             if val:
                 qs = self._meta.model.objects.filter(**{fname: val})
                 if self.instance.pk:
