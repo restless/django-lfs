@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.template.defaultfilters import slugify
+from django.core import management
 
 # lfs imports
 import lfs.core.settings as lfs_settings
@@ -54,7 +55,8 @@ class Command(BaseCommand):
     def migrate_to_08(self, application, version):
         from django.contrib.contenttypes import generic
         from django.contrib.contenttypes.models import ContentType
-        from lfs.addresses.models import Address
+        from lfs.core.models import Country
+        from lfs.addresses.models import Address, BaseAddress
         from lfs.catalog.models import DeliveryTime
         from lfs.criteria.models import CartPriceCriterion
         from lfs.criteria.models import CombinedLengthAndGirthCriterion
@@ -68,7 +70,36 @@ class Command(BaseCommand):
         from lfs.customer.models import Customer
         from lfs.order.models import Order
 
+        if not 'south' in settings.INSTALLED_APPS:
+            print "You have to add 'south' to settings.INSTALLED_APPS!"
+            return
+
         # Addresses
+        # Adding model 'BaseAddress'
+        db.create_table('addresses_baseaddress', (
+            ('id', models.fields.AutoField(primary_key=True)),
+            ('customer', models.fields.related.ForeignKey(blank=True, related_name='addresses', null=True, to=Customer)),
+            ('order', models.fields.related.ForeignKey(blank=True, related_name='addresses', null=True, to=Order)),
+            ('firstname', models.fields.CharField(max_length=50)),
+            ('lastname', models.fields.CharField(max_length=50)),
+            ('line1', models.fields.CharField(max_length=100, null=True, blank=True)),
+            ('line2', models.fields.CharField(max_length=100, null=True, blank=True)),
+            ('zip_code', models.fields.CharField(max_length=10)),
+            ('city', models.fields.CharField(max_length=50)),
+            ('state', models.fields.CharField(max_length=50, null=True, blank=True)),
+            ('country', models.fields.related.ForeignKey(to=Country, null=True, blank=True)),
+        ))
+        db.send_create_signal('addresses', ['BaseAddress'])
+
+        # Adding model 'Address'
+        db.create_table('addresses_address', (
+            ('baseaddress_ptr', models.fields.related.OneToOneField(to=BaseAddress, unique=True, primary_key=True)),
+            ('company_name', models.fields.CharField(max_length=50, null=True, blank=True)),
+            ('phone', models.fields.CharField(max_length=20, null=True, blank=True)),
+            ('email', models.fields.EmailField(max_length=50, null=True, blank=True)),
+        ))
+        db.send_create_signal('addresses', ['Address'])
+
         db.add_column("customer_customer", "sa_content_type", models.ForeignKey(ContentType, related_name="sa_content_type", blank=True, null=True))
         db.add_column("customer_customer", "sa_object_id", models.PositiveIntegerField(default=0))
 
@@ -206,12 +237,26 @@ class Command(BaseCommand):
         # Delete locale from shop
         db.delete_column("core_shop", "default_locale")
 
+        # Customer
+        db.alter_column('customer_creditcard', 'expiration_date_month', models.IntegerField(blank=True, null=True))
+        db.alter_column('customer_creditcard', 'expiration_date_year', models.IntegerField(blank=True, null=True))
+
         # Migrate Criteria #####################################################
 
         cursor1 = connection.cursor()
         cursor2 = connection.cursor()
         cursor3 = connection.cursor()
         cursor4 = connection.cursor()
+
+        db.create_table('criteria_criterion', (
+            ('id', models.fields.AutoField(primary_key=True)),
+            ('content_type', models.fields.related.ForeignKey(related_name='content_type', to=ContentType)),
+            ('content_id', models.fields.PositiveIntegerField()),
+            ('sub_type', models.fields.CharField(max_length=100, blank=True)),
+            ('position', models.fields.PositiveIntegerField(default=999)),
+            ('operator', models.fields.PositiveIntegerField(null=True, blank=True)),
+        ))
+        db.send_create_signal('criteria', ['Criterion'])
 
         db.add_column("criteria_cartpricecriterion", "criterion_ptr_id", models.IntegerField(null=True))
         db.add_column("criteria_combinedlengthandgirthcriterion", "criterion_ptr_id", models.IntegerField(null=True))
@@ -475,6 +520,11 @@ class Command(BaseCommand):
 
         application.version = "0.8"
         application.save()
+
+        # Fake south migrations
+        management.call_command('syncdb', interactive=False)
+        management.call_command('migrate', all=True, fake="0001")
+        management.call_command('migrate')
 
     def migrate_to_07(self, application, version):
         from lfs.catalog.models import Product
