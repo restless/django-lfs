@@ -64,8 +64,9 @@ class CategoryAddForm(ModelForm):
 
         # check for uniqueness
         for fname in slug_fields:
-            val = self.cleaned_data.get(fname).strip()
-            if val:
+            val = self.cleaned_data.get(fname)
+            if val and val.strip():
+                val = val.strip()
                 qs = self._meta.model.objects.filter(**{fname: val})
                 if self.instance.pk:
                     qs = qs.exclude(pk=self.instance.pk)
