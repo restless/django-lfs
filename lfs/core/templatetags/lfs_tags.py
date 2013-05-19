@@ -77,7 +77,9 @@ def google_analytics_ecommerce(context, clear_session=True):
         del request.session["voucher"]
 
     return {
+        "request": request,
         "order": order,
+        "shop": shop,
         "ga_ecommerce_tracking": shop.ga_ecommerce_tracking,
         "google_analytics_id": shop.google_analytics_id,
     }
@@ -221,7 +223,7 @@ def product_navigation(context, product):
     sorting = request.session.get("sorting", 'price')
     if sorting.strip() == '':
         sorting = 'price'
-        request.session.set("sorting", sorting)
+        request.session["sorting"] = sorting
 
     # To calculate the position we take only STANDARD_PRODUCT into account.
     # That means if the current product is a VARIANT we switch to its parent

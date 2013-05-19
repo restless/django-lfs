@@ -1,7 +1,6 @@
 # django imports
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import Paginator, EmptyPage, InvalidPage
-from django.db import IntegrityError
 from django.db.models import Q
 from django.http import HttpResponse
 from django.template import RequestContext
@@ -188,12 +187,8 @@ def add_products(request, category_id):
         if product_id.startswith("page") or product_id.startswith("filter") or \
            product_id.startswith("keep-session") or product_id.startswith("action"):
             continue
-        try:
-            category.products.add(product_id)
-        except IntegrityError:
-            continue
-
         product = Product.objects.get(pk=product_id)
+        category.products.add(product)
         product_changed.send(product)
 
     category_changed.send(category)

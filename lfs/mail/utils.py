@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.core.mail import EmailMultiAlternatives
+from django.template import RequestContext
 from django.template.base import TemplateDoesNotExist
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
@@ -83,14 +84,14 @@ def _send_order_paid_mail(order):
         mail.send(fail_silently=True)
 
 
-def send_order_received_mail(order):
+def send_order_received_mail(request, order):
     try:
-        _send_order_received_mail.delay(order)
+        _send_order_received_mail.delay(request, order)
     except AttributeError:
-        _send_order_received_mail(order)
+        _send_order_received_mail(request, order)
 
 
-def _send_order_received_mail(order):
+def _send_order_received_mail(request, order):
     """Sends an order received mail to the shop customer.
 
     Customer information is taken from the provided order.
@@ -109,14 +110,14 @@ def _send_order_received_mail(order):
         bcc = shop.get_notification_emails()
 
         # text
-        text = render_to_string("lfs/mail/order_received_mail.txt", {"order": order})
+        text = render_to_string("lfs/mail/order_received_mail.txt", RequestContext(request, {"order": order}))
         mail = EmailMultiAlternatives(
             subject=subject, body=text, from_email=from_email, to=to, bcc=bcc)
 
         # html
-        html = render_to_string("lfs/mail/order_received_mail.html", {
+        html = render_to_string("lfs/mail/order_received_mail.html", RequestContext(request, {
             "order": order
-        })
+        }))
 
         mail.attach_alternative(html, "text/html")
         mail.send(fail_silently=True)
@@ -136,7 +137,7 @@ def _send_customer_added(user):
     shop = lfs.core.utils.get_default_shop()
 
     from_email = shop.from_email
-    to = [user.username]
+    to = [user.email]
     bcc = shop.get_notification_emails()
 
     with customer_language(user):

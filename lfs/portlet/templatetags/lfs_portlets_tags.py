@@ -34,7 +34,14 @@ def lfs_portlet_slot(context, slot_name):
                context.get("page") or \
                lfs.core.utils.get_default_shop(request)
 
-    cache_key = "%s-lfs-portlet-slot-%s-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, slot_name, instance.__class__.__name__, instance.id)
+    # if one of product/page/category is set by another templatetag: issue #26
+    if instance is None or not hasattr(instance, 'id'):
+        instance = lfs.core.utils.get_default_shop(request)
+
+    cache_key = "%s-lfs-portlet-slot-%s-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
+                                                  slot_name,
+                                                  instance.__class__.__name__,
+                                                  instance.id)
     temp = cache.get(cache_key)
 
     if temp is None:
