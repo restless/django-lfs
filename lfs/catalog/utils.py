@@ -173,13 +173,13 @@ def get_product_filters(category, product_filter, price_filter, sorting):
 
     # get products and their variants
     product_ids_raw = list(products.values_list('id', flat=True))
-    product_ids_raw.extend(lfs.catalog.models.Product.objects.filter(parent__in=products).values_list('id', flat=True))
+    product_ids_raw.extend(lfs.catalog.models.Product.objects.filter(parent__in=products, active=True).values_list('id', flat=True))
     product_ids = ', '.join(map(str, product_ids_raw))
 
     # Create dict out of already set filters
     set_filters = dict(product_filter)
 
-    property_ids_raw = lfs.catalog.models.ProductPropertyValue.objects.values_list('property_id', flat=True)
+    property_ids_raw = lfs.catalog.models.ProductPropertyValue.objects.distinct().values_list('property_id', flat=True)
     property_ids = ', '.join(map(str, property_ids_raw))
 
     # if there is either no products or no property ids there can also be no
