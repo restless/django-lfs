@@ -8,7 +8,6 @@ from django.db import models
 class Migration(SchemaMigration):
     depends_on = (
         ("shipping", "0001_initial"),
-        ("payment", "0001_initial"),
     )
 
     def forwards(self, orm):
@@ -33,9 +32,6 @@ class Migration(SchemaMigration):
             ('shipping_method', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['shipping.ShippingMethod'], null=True, blank=True)),
             ('shipping_price', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('shipping_tax', self.gf('django.db.models.fields.FloatField')(default=0.0)),
-            ('payment_method', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['payment.PaymentMethod'], null=True, blank=True)),
-            ('payment_price', self.gf('django.db.models.fields.FloatField')(default=0.0)),
-            ('payment_tax', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('account_number', self.gf('django.db.models.fields.CharField')(max_length=30, blank=True)),
             ('bank_identification_code', self.gf('django.db.models.fields.CharField')(max_length=30, blank=True)),
             ('bank_name', self.gf('django.db.models.fields.CharField')(max_length=100, blank=True)),
@@ -45,7 +41,7 @@ class Migration(SchemaMigration):
             ('voucher_tax', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('message', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('pay_link', self.gf('django.db.models.fields.TextField')(blank=True)),
-            ('uuid', self.gf('django.db.models.fields.CharField')(default='cf87cb5e-5ee6-42e0-89fb-a3e02258f57f', unique=True, max_length=50)),
+            ('uuid', self.gf('django.db.models.fields.CharField')(default='4002a710-be08-4b65-b615-ff442e6eca7c', unique=True, max_length=50)),
             ('requested_delivery_date', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
         ))
         db.send_create_signal('order', ['Order'])
@@ -191,7 +187,7 @@ class Migration(SchemaMigration):
             'length': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'manage_stock_amount': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'manual_delivery_time': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'manufacturer': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'products'", 'null': 'True', 'to': "orm['manufacturer.Manufacturer']"}),
+            'manufacturer': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'products'", 'null': 'True', 'on_delete': 'models.SET_NULL', 'to': "orm['manufacturer.Manufacturer']"}),
             'meta_description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'meta_keywords': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'meta_title': ('django.db.models.fields.CharField', [], {'default': "'<name>'", 'max_length': '80', 'blank': 'True'}),
@@ -217,7 +213,7 @@ class Migration(SchemaMigration):
             'tax': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['tax.Tax']", 'null': 'True', 'blank': 'True'}),
             'template': ('django.db.models.fields.PositiveSmallIntegerField', [], {'null': 'True', 'blank': 'True'}),
             'type_of_quantity_field': ('django.db.models.fields.PositiveSmallIntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'82fe8593-3c08-49e8-996c-b29176294ba5'", 'unique': 'True', 'max_length': '50'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'b23b3483-4a1a-4df6-9fac-c437544f9818'", 'unique': 'True', 'max_length': '50'}),
             'unit': ('django.db.models.fields.CharField', [], {'max_length': '20', 'blank': 'True'}),
             'variant_position': ('django.db.models.fields.IntegerField', [], {'default': '999'}),
             'variants_display_type': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
@@ -260,7 +256,7 @@ class Migration(SchemaMigration):
             'step_type': ('django.db.models.fields.PositiveSmallIntegerField', [], {'default': '1'}),
             'title': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'type': ('django.db.models.fields.PositiveSmallIntegerField', [], {'default': '2'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'a4d7bf24-3fef-416d-9e03-a6bc625ea7f7'", 'unique': 'True', 'max_length': '50'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'f1eb807b-6a71-48bc-8760-d106d13e303c'", 'unique': 'True', 'max_length': '50'}),
             'unit': ('django.db.models.fields.CharField', [], {'max_length': '15', 'blank': 'True'}),
             'unit_max': ('django.db.models.fields.FloatField', [], {'null': 'True', 'blank': 'True'}),
             'unit_min': ('django.db.models.fields.FloatField', [], {'null': 'True', 'blank': 'True'}),
@@ -319,9 +315,6 @@ class Migration(SchemaMigration):
             'message': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'number': ('django.db.models.fields.CharField', [], {'max_length': '30'}),
             'pay_link': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'payment_method': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['payment.PaymentMethod']", 'null': 'True', 'blank': 'True'}),
-            'payment_price': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
-            'payment_tax': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'price': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'requested_delivery_date': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'sa_content_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'order_shipping_address'", 'to': "orm['contenttypes.ContentType']"}),
@@ -334,7 +327,7 @@ class Migration(SchemaMigration):
             'state_modified': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'tax': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']", 'null': 'True', 'blank': 'True'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'default': "'c46f7fa0-4d29-40f8-b89a-03c823b56a86'", 'unique': 'True', 'max_length': '50'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'default': "'ad5ca701-9d43-4885-a658-669c43ad9e1a'", 'unique': 'True', 'max_length': '50'}),
             'voucher_number': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'voucher_price': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'voucher_tax': ('django.db.models.fields.FloatField', [], {'default': '0.0'})
@@ -360,21 +353,6 @@ class Migration(SchemaMigration):
             'order_item': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'properties'", 'to': "orm['order.OrderItem']"}),
             'property': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['catalog.Property']"}),
             'value': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'})
-        },
-        'payment.paymentmethod': {
-            'Meta': {'ordering': "('priority',)", 'object_name': 'PaymentMethod'},
-            'active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'deletable': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'image': ('django.db.models.fields.files.ImageField', [], {'max_length': '100', 'null': 'True', 'blank': 'True'}),
-            'module': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
-            'note': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'price': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
-            'priority': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'tax': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['tax.Tax']", 'null': 'True', 'blank': 'True'}),
-            'type': ('django.db.models.fields.PositiveSmallIntegerField', [], {'default': '0'})
         },
         'shipping.shippingmethod': {
             'Meta': {'ordering': "('priority',)", 'object_name': 'ShippingMethod'},

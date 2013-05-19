@@ -151,3 +151,7 @@ class PageTestCase(TestCase):
 
         self.assertEqual("This is a short text - John Doe - Page Title", self.page.get_meta_description())
 
+    def test_add_page_with_existing_slug(self):
+        next_id = Page.objects.count() + 1
+        Page.objects.create(id=next_id, title="Test1", slug="test")
+        self.assertRaises(IntegrityError, Page.objects.create, id=next_id + 1, title="Test2", slug="test")
