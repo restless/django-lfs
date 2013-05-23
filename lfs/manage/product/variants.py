@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import permission_required
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import EmptyPage
 from django.db import IntegrityError
 from django.forms import ModelForm, ValidationError
 from django.forms.widgets import Select
@@ -122,6 +123,7 @@ class ProductVariantSimpleForm(ModelForm):
         cleaned_data = self.cleaned_data
         for lang in get_languages_list():
             trans_slug = build_localized_fieldname("slug", lang)
+            trans_name = build_localized_fieldname("name", lang)
             slug = cleaned_data.get(trans_slug)
 
             for option in self.options:
@@ -129,21 +131,27 @@ class ProductVariantSimpleForm(ModelForm):
                 o = PropertyOption.objects.get(pk=option_id)
                 if slug:
                     slug += "-"
-                slug += slugify(o.name)
+                slug += slugify(getattr(o, trans_name, ''))
 
-            product_slug = getattr(self.product, trans_slug)
-            slug = "%s-%s" % (product_slug, slug)
+            product_slug = getattr(self.product, trans_slug, '')
+            if product_slug is None:
+                product_slug = ''
+            if product_slug + slug.replace('-', '') == '':
+                slug = ''
+            else:
+                slug = "%s-%s" % (product_slug, slug)
 
             message = ''
 
-            # need to validate the amalgamated slug to make sure it is not already in use
-            try:
-                variant = Product.objects.get(**{trans_slug: slug})
-                message = _(u"That slug is already in use. Please use another.")
-            except Product.MultipleObjectsReturned:
-                message = _(u"That slug is already in use. Please use another.")
-            except Product.DoesNotExist:
-                cleaned_data[trans_slug] = slug
+            # # need to validate the amalgamated slug to make sure it is not already in use
+            # try:
+            #     variant = Product.objects.get(**{trans_slug: slug})
+            #     message = _(u"That slug is already in use. Please use another.")
+            # except Product.MultipleObjectsReturned:
+            #     message = _(u"That slug is already in use. Please use another.")
+            # except Product.DoesNotExist:
+            #     cleaned_data[trans_slug] = slug
+            cleaned_data[trans_slug] = slug
 
             if message:
                 self._errors[trans_slug] = self.error_class([message])
@@ -506,6 +514,8 @@ def add_variants(request, product_id):
                 properties.append(temp)
             else:
                 properties.append(["%s|%s" % (property_id, value)])
+
+    message = _('No variants have been added')
 
     # Add variant(s)
     for i, options in enumerate(manage_utils.cartesian_product(*properties)):
