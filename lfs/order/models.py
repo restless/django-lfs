@@ -68,7 +68,7 @@ class Order(models.Model):
 
     customer_firstname = models.CharField(_(u"firstname"), max_length=50)
     customer_lastname = models.CharField(_(u"lastname"), max_length=50)
-    customer_email = models.CharField(_(u"email"), max_length=50)
+    customer_email = models.CharField(_(u"email"), max_length=75)
 
     sa_content_type = models.ForeignKey(ContentType, related_name="order_shipping_address")
     sa_object_id = models.PositiveIntegerField()
@@ -130,8 +130,7 @@ class Order(models.Model):
             if order_item.product is not None:
                 order_name = order_name + order_item.product.get_name() + ", "
 
-        order_name.strip(', ')
-        return order_name
+        return order_name.strip(', ')
 
 
 class OrderItem(models.Model):
