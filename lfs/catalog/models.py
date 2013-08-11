@@ -14,7 +14,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
 # lfs imports
-from lfs.caching.utils import get_cache_group_id
 import lfs.catalog.utils
 from lfs.core.fields.thumbs import ImageWithThumbsField
 from lfs.core.managers import ActiveManager
@@ -308,7 +307,7 @@ class Category(models.Model):
         if self.image:
             return self.image
         else:
-            if self.parent:
+            if self.parent_id:
                 return self.parent.get_image()
 
         return None
@@ -349,6 +348,7 @@ class Category(models.Model):
         """
         Returns property groups for given category.
         """
+        from lfs.caching.utils import get_cache_group_id
         properties_version = get_cache_group_id('global-properties-version')
         cache_key = "%s-%s-category-property-groups-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, properties_version,
                                                            self.id)
@@ -699,12 +699,19 @@ class Product(models.Model):
         """
         Overwritten to save effective_price.
         """
-        if self.for_sale:
-            self.effective_price = self.for_sale_price
+        pc = self.get_price_calculator(None)
+        self.effective_price = pc.get_effective_price()
+        if self.is_variant():
+            dv = self.parent.get_default_variant()
+            # if this is default variant
+            if dv and self.pk == dv.pk:
+                # trigger effective price calculation for parent to have it set to price of default variant
+                super(Product, self).save(*args, **kwargs)
+                self.parent.save()
+            else:
+                super(Product, self).save(*args, **kwargs)
         else:
-            self.effective_price = self.price
-
-        super(Product, self).save(*args, **kwargs)
+            super(Product, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
         """
@@ -965,13 +972,12 @@ class Product(models.Model):
         images = cache.get(cache_key)
 
         if images is None:
-            images = []
             if self.is_variant() and not self.active_images:
-                object = self.parent
+                obj = self.parent
             else:
-                object = self
+                obj = self
 
-            images = object.images.all()
+            images = obj.images.all()
             cache.set(cache_key, images)
 
         return images
@@ -1044,6 +1050,7 @@ class Product(models.Model):
         """
         Returns the id of the selected option for property with passed id.
         """
+        from lfs.caching.utils import get_cache_group_id
         pid = self.get_parent().pk
         properties_version = get_cache_group_id('global-properties-version')
         group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
@@ -1063,6 +1070,7 @@ class Product(models.Model):
         """
         Returns properties with ``display_on_product`` is True.
         """
+        from lfs.caching.utils import get_cache_group_id
         pid = self.get_parent().pk
         properties_version = get_cache_group_id('global-properties-version')
         group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
@@ -1102,6 +1110,7 @@ class Product(models.Model):
         Returns the property value of a variant in the correct ordering of the
         properties.
         """
+        from lfs.caching.utils import get_cache_group_id
         pid = self.get_parent().pk
         properties_version = get_cache_group_id('global-properties-version')
         group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
@@ -1213,6 +1222,7 @@ class Product(models.Model):
         Returns the property value of a variant in the correct ordering of the
         properties. Traverses through all parent properties
         """
+        from lfs.caching.utils import get_cache_group_id
         pid = self.get_parent().pk
         properties_version = get_cache_group_id('global-properties-version')
         group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
@@ -1231,6 +1241,7 @@ class Product(models.Model):
         """
         Returns True if the variant has the given property / option combination.
         """
+        from lfs.caching.utils import get_cache_group_id
         pid = self.get_parent().pk
         properties_version = get_cache_group_id('global-properties-version')
         group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
@@ -1546,7 +1557,7 @@ class Product(models.Model):
 
         if self.default_variant is not None:
             default_variant = self.default_variant
-        else:
+        elif self.is_product_with_variants():
             try:
                 default_variant = self.variants.filter(active=True)[0]
             except IndexError:
@@ -1570,6 +1581,8 @@ class Product(models.Model):
         elif self.category_variant == CATEGORY_VARIANT_CHEAPEST_PRICES:
             return self.get_default_variant()
         elif self.category_variant == CATEGORY_VARIANT_DEFAULT:
+            return self.get_default_variant()
+        elif self.category_variant is None:
             return self.get_default_variant()
         else:
             try:
