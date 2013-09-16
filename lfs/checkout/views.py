@@ -239,7 +239,7 @@ def one_page_checkout(request, template_name="lfs/checkout/one_page_checkout.htm
             # Save addresses
             iam.save()
 
-            # If there the shipping address is not given, the invoice address
+            # If the shipping address is not given, the invoice address
             # is copied.
             if request.POST.get("no_shipping", "") == "":
                 sam.save()

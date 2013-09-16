@@ -1,5 +1,4 @@
 # django imports
-from django.template.loader import render_to_string
 from django.template.loader import select_template
 from django.template import RequestContext
 
