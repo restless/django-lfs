@@ -174,6 +174,7 @@ urlpatterns += patterns('lfs.manage.property_groups.views',
     url(r'^assign-properties/(?P<group_id>\d*)', "assign_properties", name="lfs_assign_properties"),
     url(r'^update-properties/(?P<group_id>\d*)', "update_properties", name="lfs_update_properties"),
     url(r'^no-property-groups$', "no_property_groups", name="lfs_manage_no_property_groups"),
+    url(r'^sort-property-groups$', "sort_property_groups", name="lfs_manage_sort_property_groups"),
 )
 
 # Property Groups / Products
@@ -199,6 +200,8 @@ urlpatterns += patterns('lfs.manage.property.views',
     url(r'^save-number-field-validators/(?P<property_id>\d*)', "save_number_field_validators", name="lfs_save_number_field_validators"),
     url(r'^save-select-field/(?P<property_id>\d*)', "save_select_field", name="lfs_save_select_field"),
     url(r'^no-properties$', "no_properties", name="lfs_manage_no_shop_properties"),
+    url(r'^set-property-name-filter$', "set_name_filter", name="lfs_set_property_name_filter"),
+    url(r'^set-property-page$', "set_properties_page", name="lfs_set_properties_page"),
 )
 
 # Product properties
