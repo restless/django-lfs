@@ -37,10 +37,7 @@ class CheckoutTestCase(TestCase):
     def setUp(self):
         """
         """
-        ie = Country.objects.get(code="ie")
         gb = Country.objects.get(code="gb")
-        de = Country.objects.get(code="de")
-        us = Country.objects.get(code="us")
         fr = Country.objects.get(code="fr")
         nl = Country.objects.get(code="nl")
 
@@ -97,6 +94,8 @@ class CheckoutTestCase(TestCase):
             selected_payment_method=self.by_invoice,
             selected_shipping_address=address1,
             selected_invoice_address=address2,
+            default_shipping_address=address1,
+            default_invoice_address=address2,
         )
 
         self.PRODUCT1_NAME = "Surfboard"
@@ -282,7 +281,7 @@ class CheckoutTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
         # check database quantities post-checkout
-        self.assertEquals(Address.objects.count(), 2)
+        self.assertEquals(Address.objects.count(), 4)
         self.assertEquals(Customer.objects.count(), 1)
         self.assertEquals(Order.objects.count(), 1)
 
@@ -343,7 +342,7 @@ class CheckoutTestCase(TestCase):
         self.assertRedirects(checkout_post_response, reverse('lfs_thank_you'), status_code=302, target_status_code=200,)
 
         # check database quantities post-checkout
-        self.assertEquals(Address.objects.count(), 2)
+        self.assertEquals(Address.objects.count(), 4)
         self.assertEquals(Customer.objects.count(), 1)
         self.assertEquals(Order.objects.count(), 1)
 

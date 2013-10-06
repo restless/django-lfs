@@ -3,7 +3,6 @@ from copy import deepcopy
 
 # django imports
 from django.conf import settings
-from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
@@ -16,7 +15,6 @@ from django.utils.translation import ugettext_lazy as _
 
 # lfs imports
 import lfs.core.utils
-from lfs.customer.utils import create_unique_username
 import lfs.discounts.utils
 import lfs.order.utils
 import lfs.payment.settings
@@ -24,13 +22,15 @@ import lfs.payment.utils
 import lfs.shipping.utils
 import lfs.voucher.utils
 from lfs.addresses.utils import AddressManagement
+from lfs.addresses.settings import CHECKOUT_NOT_REQUIRED_ADDRESS
 from lfs.cart import utils as cart_utils
+from lfs.core.models import Country
 from lfs.checkout.forms import OnePageCheckoutForm
 from lfs.checkout.settings import CHECKOUT_TYPE_ANON
 from lfs.checkout.settings import CHECKOUT_TYPE_AUTH
 from lfs.customer import utils as customer_utils
-from lfs.core.models import Country
-from lfs.customer.forms import CreditCardForm
+from lfs.customer.utils import create_unique_username
+from lfs.customer.forms import CreditCardForm, CustomerAuthenticationForm
 from lfs.customer.forms import BankAccountForm
 from lfs.customer.forms import RegisterForm
 from lfs.payment.models import PaymentMethod
@@ -56,12 +56,11 @@ def login(request, template_name="lfs/checkout/login.html"):
         return HttpResponseRedirect(reverse("lfs_checkout"))
 
     # Using Djangos default AuthenticationForm
-    login_form = AuthenticationForm()
-    login_form.fields["username"].label = _(u"E-Mail")
+    login_form = CustomerAuthenticationForm()
     register_form = RegisterForm()
 
     if request.POST.get("action") == "login":
-        login_form = AuthenticationForm(data=request.POST)
+        login_form = CustomerAuthenticationForm(data=request.POST)
         login_form.fields["username"].label = _(u"E-Mail")
         if login_form.is_valid():
             from django.contrib.auth import login
@@ -215,6 +214,7 @@ def one_page_checkout(request, template_name="lfs/checkout/one_page_checkout.htm
         return HttpResponseRedirect(reverse("lfs_checkout_login"))
 
     customer = lfs.customer.utils.get_or_create_customer(request)
+
     invoice_address = customer.selected_invoice_address
     shipping_address = customer.selected_shipping_address
     bank_account = customer.selected_bank_account
@@ -230,26 +230,38 @@ def one_page_checkout(request, template_name="lfs/checkout/one_page_checkout.htm
         if shop.confirm_toc and ("confirm_toc" not in request.POST):
             toc = False
             if checkout_form.errors is None:
-                checkout_form.errors = {}
+                checkout_form._errors = {}
             checkout_form.errors["confirm_toc"] = _(u"Please confirm our terms and conditions")
         else:
             toc = True
 
         if checkout_form.is_valid() and bank_account_form.is_valid() and iam.is_valid() and sam.is_valid() and toc:
-            # Save addresses
-            iam.save()
-
-            # If the shipping address is not given, the invoice address
-            # is copied.
-            if request.POST.get("no_shipping", "") == "":
-                sam.save()
+            if CHECKOUT_NOT_REQUIRED_ADDRESS == 'shipping':
+                iam.save()
+                if request.POST.get("no_shipping", "") == "":
+                    # If the shipping address is given then save it.
+                    sam.save()
+                else:
+                    # If the shipping address is not given, the invoice address
+                    # is copied.
+                    if customer.selected_shipping_address:
+                        customer.selected_shipping_address.delete()
+                    shipping_address = deepcopy(customer.selected_invoice_address)
+                    shipping_address.id = None
+                    shipping_address.save()
+                    customer.selected_shipping_address = shipping_address
             else:
-                if customer.selected_shipping_address:
-                    customer.selected_shipping_address.delete()
-                shipping_address = deepcopy(customer.selected_invoice_address)
-                shipping_address.id = None
-                shipping_address.save()
-                customer.selected_shipping_address = shipping_address
+                sam.save()
+                if request.POST.get("no_invoice", "") == "":
+                    iam.save()
+                else:
+                    if customer.selected_invoice_address:
+                        customer.selected_invoice_address.delete()
+                    invoice_address = deepcopy(customer.selected_shipping_address)
+                    invoice_address.id = None
+                    invoice_address.save()
+                    customer.selected_invoice_address = invoice_address
+            customer.sync_selected_to_default_addresses()
 
             # Save payment method
             customer.selected_payment_method_id = request.POST.get("payment_method")
@@ -406,6 +418,7 @@ def changed_invoice_country(request):
     if address:
         address.country = Country.objects.get(code=country_iso.lower())
         address.save()
+        customer.sync_selected_to_default_invoice_address()
 
     am = AddressManagement(customer, address, "invoice")
     result = simplejson.dumps({
@@ -426,6 +439,7 @@ def changed_shipping_country(request):
     if address:
         address.country = Country.objects.get(code=country_iso.lower())
         address.save()
+        customer.sync_selected_to_default_shipping_address()
 
     am = AddressManagement(customer, address, "shipping")
     result = simplejson.dumps({
@@ -438,23 +452,36 @@ def changed_shipping_country(request):
 def _save_country(request, customer):
     """
     """
-    # Update shipping country
-    country_iso = request.POST.get("shipping-country", None)
-    if request.POST.get("no_shipping") == "on":
-        country_iso = request.POST.get("invoice-country", None)
+    # Update country for address that is marked as 'same as invoice' or 'same as shipping'
+    if CHECKOUT_NOT_REQUIRED_ADDRESS == 'shipping':
+        country_iso = request.POST.get("shipping-country", None)
 
-    if country_iso is not None:
-        country = Country.objects.get(code=country_iso.lower())
-        if customer.selected_shipping_address:
-            customer.selected_shipping_address.country = country
-            customer.selected_shipping_address.save()
-        customer.selected_country = country
-        customer.save()
+        if request.POST.get("no_shipping") == "on":
+            country_iso = request.POST.get("invoice-country", None)
 
-        lfs.shipping.utils.update_to_valid_shipping_method(request, customer)
-        lfs.payment.utils.update_to_valid_payment_method(request, customer)
-        customer.save()
+        if country_iso is not None:
+            country = Country.objects.get(code=country_iso.lower())
+            if customer.selected_shipping_address:
+                customer.selected_shipping_address.country = country
+                customer.selected_shipping_address.save()
+            customer.selected_country = country
+            customer.save()
 
+            customer.sync_selected_to_default_shipping_address()
+
+            lfs.shipping.utils.update_to_valid_shipping_method(request, customer)
+            lfs.payment.utils.update_to_valid_payment_method(request, customer)
+            customer.save()
+    else:
+        # update invoice address if 'same as shipping' address option is set and shipping address was changed
+        if request.POST.get("no_invoice") == "on":
+            country_iso = request.POST.get("shipping-country", None)
+            if country_iso is not None:
+                country = Country.objects.get(code=country_iso.lower())
+                if customer.selected_invoice_address:
+                    customer.selected_invoice_address.country = country
+                    customer.selected_invoice_address.save()
+            customer.sync_selected_to_default_invoice_address()
 
 def _save_customer(request, customer):
     """

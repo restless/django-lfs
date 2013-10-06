@@ -32,8 +32,8 @@ def manage_property_groups(request):
     """The main view to manage properties.
     """
     try:
-        property = PropertyGroup.objects.all()[0]
-        url = reverse("lfs_manage_property_group", kwargs={"id": property.id})
+        prop = PropertyGroup.objects.all()[0]
+        url = reverse("lfs_manage_property_group", kwargs={"id": prop.id})
     except IndexError:
         url = reverse("lfs_manage_no_property_groups")
 
@@ -87,6 +87,7 @@ def properties_inline(request, id, template_name="manage/property_groups/propert
     #    pk__in=assigned_property_ids).exclude(local=True)
 
     assignable_properties = Property.objects.exclude(local=True).exclude(groupspropertiesrelation__in=gps)
+    assignable_properties = assignable_properties.order_by('name')
 
     return render_to_string(template_name, RequestContext(request, {
         "property_group": property_group,
@@ -199,7 +200,7 @@ def products_tab(request, product_group_id, template_name="manage/property_group
 
 @permission_required("core.manage_shop")
 def products_inline(request, product_group_id, as_string=False,
-    template_name="manage/property_groups/products_inline.html"):
+                    template_name="manage/property_groups/products_inline.html"):
     """Renders the products tab of the property groups management views.
     """
     property_group = PropertyGroup.objects.get(pk=product_group_id)
@@ -323,3 +324,25 @@ def _udpate_positions(group_id):
     for i, gp in enumerate(GroupsPropertiesRelation.objects.filter(group=group_id)):
         gp.position = (i + 1) * 10
         gp.save()
+
+
+@permission_required("core.manage_shop")
+def sort_property_groups(request):
+    """Sort property groups
+    """
+    property_group_list = request.POST.get("serialized", "").split('&')
+    assert (isinstance(property_group_list, list))
+    if len(property_group_list) > 0:
+        pos = 10
+        for cat_str in property_group_list:
+            elem, pg_id = cat_str.split('=')
+            pg = PropertyGroup.objects.get(pk=pg_id)
+            pg.position = pos
+            pg.save()
+            pos += 10
+
+    result = simplejson.dumps({
+        "message": _(u"The Property groups have been sorted."),
+    }, cls=LazyEncoder)
+
+    return HttpResponse(result)

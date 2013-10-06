@@ -197,12 +197,8 @@ def add_accessory_to_cart(request, product_id, quantity=1):
     Adds the product with passed product_id as an accessory to the cart and
     updates the added-to-cart view.
     """
-    try:
-        quantity = float(quantity)
-    except TypeError:
-        quantity = 1
-
     product = lfs_get_object_or_404(Product, pk=product_id)
+    quantity = product.get_clean_quantity_value(quantity)
 
     session_cart_items = request.session.get("cart_items", [])
     cart = cart_utils.get_cart(request)
@@ -237,11 +233,8 @@ def add_to_cart(request, product_id=None):
     if not (product.is_active() and product.is_deliverable()):
         raise Http404()
 
-    try:
-        value = request.POST.get("quantity", "1.0")
-        quantity = core_utils.atof(value)
-    except (TypeError, ValueError):
-        quantity = 1.0
+    quantity = request.POST.get("quantity", "1.0")
+    quantity = product.get_clean_quantity_value(quantity)
 
     # Validate properties (They are added below)
     properties_dict = {}
@@ -318,10 +311,7 @@ def add_to_cart(request, product_id=None):
 
             # Get quantity
             quantity = request.POST.get("quantity-%s" % accessory_id, 0)
-            try:
-                quantity = float(quantity)
-            except TypeError:
-                quantity = 1
+            quantity = accessory.get_clean_quantity_value(quantity)
 
             cart_item = cart.add(product=accessory, amount=quantity)
             cart_items.append(cart_item)
@@ -398,11 +388,8 @@ def refresh_cart(request):
     # Update Amounts
     message = ""
     for item in cart.get_items():
-        try:
-            value = request.POST.get("amount-cart-item_%s" % item.id, "0.0")
-            amount = core_utils.atof(value)
-        except (TypeError, ValueError):
-            amount = 1.0
+        amount = request.POST.get("amount-cart-item_%s" % item.id, "0.0")
+        amount = item.product.get_clean_quantity_value(amount, allow_zero=True)
 
         if item.product.manage_stock_amount and amount > item.product.stock_amount and not item.product.order_time:
             amount = item.product.stock_amount
@@ -415,7 +402,6 @@ def refresh_cart(request):
                 message = _(u"Sorry, but '%(product)s' is only one time available." % {"product": item.product.name})
             else:
                 message = _(u"Sorry, but '%(product)s' is only %(amount)s times available.") % {"product": item.product.name, "amount": amount}
-
 
         if item.product.get_active_packing_unit():
             item.amount = item.product.get_amount_by_packages(float(amount))

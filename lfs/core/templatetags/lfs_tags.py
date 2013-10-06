@@ -284,14 +284,14 @@ def product_navigation(context, product):
 
     total = len(product_slugs)
     if product_index < total - 1:
-        next = product_slugs[product_index + 1]
+        next_product = product_slugs[product_index + 1]
     else:
-        next = None
+        next_product = None
 
     result = {
         "display": True,
         "previous": previous,
-        "next": next,
+        "next": next_product,
         "current": product_index + 1,
         "total": total,
         "STATIC_URL": context.get("STATIC_URL"),
@@ -591,7 +591,7 @@ def currency(value, request=None, grouping=True):
     try:
         result = locale.currency(value, grouping=grouping, international=shop.use_international_currency_code)
     except ValueError, e:
-        result = value
+        result = str(value)
         logger.error("currency filter: %s" % e)
 
     # add css class if value is negative

@@ -16,6 +16,7 @@ from django.conf import settings
 # lfs imports
 import lfs.catalog.utils
 from lfs.core.fields.thumbs import ImageWithThumbsField
+from lfs.core import utils as core_utils
 from lfs.core.managers import ActiveManager
 from lfs.catalog.settings import CHOICES, CONTENT_CATEGORIES
 from lfs.catalog.settings import CHOICES_STANDARD
@@ -1143,6 +1144,12 @@ class Product(models.Model):
 
         return properties
 
+    def is_select_display_type(self):
+        return self.variants_display_type == SELECT
+
+    def is_list_display_type(self):
+        return self.variants_display_type == LIST
+
     def get_all_properties(self, variant=None):
         """ Return all properties for current product
             if variant is passed then select fields for it
@@ -1479,8 +1486,8 @@ class Product(models.Model):
             properties.extend(property_group.properties.filter(type=PROPERTY_SELECT_FIELD).order_by("groupspropertiesrelation"))
 
         # local
-        for property in self.properties.filter(type=PROPERTY_SELECT_FIELD).order_by("productspropertiesrelation"):
-            properties.append(property)
+        for prop in self.properties.filter(type=PROPERTY_SELECT_FIELD).order_by("productspropertiesrelation"):
+            properties.append(prop)
 
         return properties
 
@@ -1494,8 +1501,8 @@ class Product(models.Model):
             properties.extend(property_group.properties.filter(configurable=True).order_by("groupspropertiesrelation"))
 
         # local
-        for property in self.properties.filter(configurable=True).order_by("productspropertiesrelation"):
-            properties.append(property)
+        for prop in self.properties.filter(configurable=True).order_by("productspropertiesrelation"):
+            properties.append(prop)
 
         return properties
 
@@ -1715,7 +1722,7 @@ class Product(models.Model):
         """
         return len(self.get_variants()) > 0
 
-    def get_variant(self, options):
+    def get_variant(self, options, only_active=True):
         """
         Returns the variant with the given options or None.
 
@@ -1738,7 +1745,11 @@ class Product(models.Model):
             parsed_options.append(option)
         options = "".join(parsed_options)
 
-        for variant in self.variants.filter(active=True):
+        variants = self.variants.all()
+        if only_active:
+            variants = variants.filter(active=True)
+
+        for variant in variants:
             temp = variant.property_values.filter(type=PROPERTY_VALUE_TYPE_VARIANT)
             temp = ["%s|%s" % (x.property.id, x.value) for x in temp]
             temp.sort()
@@ -1749,11 +1760,11 @@ class Product(models.Model):
 
         return None
 
-    def has_variant(self, options):
+    def has_variant(self, options, only_active=True):
         """
         Returns true if a variant with given options already exists.
         """
-        if self.get_variant(options) is None:
+        if self.get_variant(options, only_active=only_active) is None:
             return False
         else:
             return True
@@ -1885,13 +1896,32 @@ class Product(models.Model):
 
         return None
 
+    def get_clean_quantity_value(self, quantity=1, allow_zero=False):
+        """
+        Returns the valid quantity based on the product's type of
+        quantity field.
+        """
+        try:
+            quantity = abs(core_utils.atof(str(quantity)))
+        except (TypeError, ValueError):
+            quantity = 1.0
+
+        if not allow_zero:
+            quantity = 1 if quantity <= 0 else quantity
+
+        type_of_quantity_field = self.get_type_of_quantity_field()
+        if type_of_quantity_field == QUANTITY_FIELD_INTEGER or getattr(settings, 'LFS_FORCE_INTEGER_QUANTITY', False):
+            quantity = int(quantity)
+
+        return quantity
+
     def get_clean_quantity(self, quantity=1):
         """
         Returns the correct formatted quantity based on the product's type of
         quantity field.
         """
         try:
-            quantity = float(quantity)
+            quantity = abs(core_utils.atof(str(quantity)))
         except (TypeError, ValueError):
             quantity = 1.0
 
@@ -2004,9 +2034,10 @@ class PropertyGroup(models.Model):
     """
     name = models.CharField(_(u"Name"), blank=True, max_length=50)
     products = models.ManyToManyField(Product, verbose_name=_(u"Products"), related_name="property_groups")
+    position = models.IntegerField(_(u"Position"), default=1000)
 
     class Meta:
-        ordering = ("name", )
+        ordering = ("position", )
 
     def __unicode__(self):
         return self.name

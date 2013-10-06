@@ -174,6 +174,22 @@ LFS_EXTRA_ORDER_STATES
 Addresses
 =========
 
+LFS_AUTO_UPDATE_DEFAULT_ADDRESSES
+    If True then default shipping and invoice addresses (set
+    by customer in his account settings) are automatically updated to the values
+    from last order. Else, default addresses are untouched and are used
+    as defaults in every new order. This setting is optional, the default value
+    is ``True``.
+
+LFS_CHECKOUT_NOT_REQUIRED_ADDRESS
+    During checkout it is possible to not fill in one of the addresses - it will be then copied from another one.
+    By default Shipping address is same as Invoice address, but it can be changed with this setting.
+    Possible values are: ``shipping`` and ``invoice``. Default is ``shipping``.
+    Note that you'll have to manually change checkout page template and lfs.js if you change it to ``invoice``.
+
+    By default checkout_form (used at one_page_checkout.html) has method: ``no_address_field`` that will return either
+    ``no_shipping`` or ``no_invoice`` field, depending on this setting.
+
 Plugins
 -------
 
