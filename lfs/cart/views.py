@@ -162,6 +162,7 @@ def added_to_cart(request, template_name="lfs/cart/added_to_cart.html"):
         "cart_items_count": cart_items_count,
         "shopping_url": request.META.get("HTTP_REFERER", "/"),
         "product_accessories": accessories,
+        "product": cart_items[0].product,
         "cart_items": added_to_cart_items(request),
     }))
 
@@ -198,6 +199,14 @@ def add_accessory_to_cart(request, product_id, quantity=1):
     updates the added-to-cart view.
     """
     product = lfs_get_object_or_404(Product, pk=product_id)
+    # for product with variants add default variant
+    if product.is_product_with_variants():
+        variant = product.get_default_variant()
+        if variant:
+            product = variant
+        else:
+            return HttpResponse(added_to_cart_items(request))
+
     quantity = product.get_clean_quantity_value(quantity)
 
     session_cart_items = request.session.get("cart_items", [])
@@ -308,6 +317,14 @@ def add_to_cart(request, product_id=None):
                 accessory = Product.objects.get(pk=accessory_id)
             except ObjectDoesNotExist:
                 continue
+
+            # for product with variants add default variant
+            if accessory.is_product_with_variants():
+                accessory_variant = accessory.get_default_variant()
+                if accessory_variant:
+                    accessory = accessory_variant
+                else:
+                    continue
 
             # Get quantity
             quantity = request.POST.get("quantity-%s" % accessory_id, 0)
