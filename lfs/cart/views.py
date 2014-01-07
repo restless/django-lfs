@@ -162,7 +162,7 @@ def added_to_cart(request, template_name="lfs/cart/added_to_cart.html"):
         "cart_items_count": cart_items_count,
         "shopping_url": request.META.get("HTTP_REFERER", "/"),
         "product_accessories": accessories,
-        "product": cart_items[0].product,
+        "product": cart_items[0].product if cart_items else None,
         "cart_items": added_to_cart_items(request),
     }))
 
@@ -454,7 +454,7 @@ def refresh_cart(request):
         "message": message,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def check_voucher(request):
@@ -468,4 +468,4 @@ def check_voucher(request):
         "html": (("#cart-inline", cart_inline(request)),)
     })
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')

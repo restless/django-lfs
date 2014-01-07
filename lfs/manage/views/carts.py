@@ -186,7 +186,7 @@ def set_carts_page(request):
         ),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -203,7 +203,7 @@ def set_cart_page(request):
         ),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -246,7 +246,7 @@ def set_cart_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -282,7 +282,7 @@ def set_cart_filters_date(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -308,7 +308,7 @@ def reset_cart_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 # Private methods
@@ -319,16 +319,20 @@ def _get_filtered_carts(cart_filters):
 
     # start
     start = cart_filters.get("start", "")
+    s = start
     if start != "":
         s = lfs.core.utils.get_start_day(start)
-    else:
+
+    if not s:
         s = datetime.min
 
     # end
     end = cart_filters.get("end", "")
+    e = end
     if end != "":
         e = lfs.core.utils.get_end_day(end)
-    else:
+
+    if not e:
         e = datetime.max
 
     carts = carts.filter(modification_date__range=(s, e))

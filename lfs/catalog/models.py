@@ -903,11 +903,11 @@ class Product(models.Model):
         """
         if self.is_variant():
             if self.active_base_price == CHOICES_STANDARD:
-                return self.parent.active_base_price
+                return self.parent.get_active_base_price()
             else:
                 return self.active_base_price == CHOICES_YES
         else:
-            return self.active_base_price
+            return self.active_base_price == CHOICES_YES
 
     def get_base_packing_price(self, request, with_properties=True):
         """
@@ -1816,11 +1816,11 @@ class Product(models.Model):
         """
         if self.is_variant():
             if self.active_packing_unit == CHOICES_STANDARD:
-                return self.parent.active_packing_unit
+                return self.parent.get_active_packing_unit()
             else:
                 return self.active_packing_unit == CHOICES_YES
         else:
-            return self.active_packing_unit
+            return self.active_packing_unit == CHOICES_YES
 
     def get_packing_info(self):
         """
@@ -2724,7 +2724,7 @@ class ProductAttachment(models.Model):
     """
     title = models.CharField(_(u"Title"), max_length=50)
     description = models.TextField(_(u"Description"), blank=True)
-    file = models.FileField(upload_to="files")
+    file = models.FileField(upload_to="files", max_length=500)
     product = models.ForeignKey(Product, verbose_name=_(u"Product"), related_name="attachments")
     position = models.IntegerField(_(u"Position"), default=1)
 

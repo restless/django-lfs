@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 
 # django imports
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import EmptyPage
@@ -113,8 +114,10 @@ def customer_inline(request, customer_id, template_name="manage/customer/custome
     query = Q()
     if customer.session:
         query |= Q(session=customer.session)
-    if customer.user:
+    try:
         query |= Q(user=customer.user)
+    except User.DoesNotExist:
+        pass
     orders = Order.objects.filter(query)
 
     try:
@@ -238,7 +241,7 @@ def set_selectable_customers_page(request):
         "html": (("#selectable-customers-inline", result),),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -252,7 +255,7 @@ def set_customers_page(request):
         ),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -288,7 +291,7 @@ def set_ordering(request, ordering):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -321,7 +324,7 @@ def set_customer_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -348,7 +351,7 @@ def reset_customer_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 # Private Methods
