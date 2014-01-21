@@ -2,6 +2,8 @@ import datetime
 
 from django.core.management.base import BaseCommand
 
+import logging
+logger = logging.getLogger('addresses')
 
 class Command(BaseCommand):
     args = ''
@@ -12,6 +14,7 @@ class Command(BaseCommand):
         cnt = 0
         ten_days_ago = datetime.date.today() - datetime.timedelta(days=10)
         for address in BaseAddress.objects.filter(order__isnull=True, customer__isnull=True, created__lt=ten_days_ago):
+            logger.debug('Deleting address: %s' % address.pk)
             address.delete()
             cnt += 1
         print "Removed %s addresses" % cnt
