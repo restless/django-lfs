@@ -13,6 +13,9 @@ from lfs.core.models import Country
 from lfs.shipping.models import ShippingMethod
 from lfs.payment.models import PaymentMethod
 
+import logging
+logger = logging.getLogger('addresses')
+
 
 class Customer(models.Model):
     """
@@ -87,32 +90,38 @@ class Customer(models.Model):
         # Synchronize selected addresses with default addresses
         auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or not auto_update:
+            logger.debug('sync default to selected. Customer: %s' % (self.pk))
             shipping_address = deepcopy(self.default_shipping_address)
             if self.selected_shipping_address:
                 shipping_address.id = self.selected_shipping_address.id
                 shipping_address.pk = self.selected_shipping_address.pk
                 shipping_address.save()
+                logger.debug('sync default to selected. Copied shipping: %s' % (self.selected_shipping_address.pk))
             else:
                 shipping_address.id = None
                 shipping_address.pk = None
                 shipping_address.save()
                 self.save()  # save customer to set generic key id
+                logger.debug('sync default to selected. New shipping: %s' % (shipping_address.pk))
 
             invoice_address = deepcopy(self.default_invoice_address)
             if self.selected_invoice_address:
                 invoice_address.id = self.selected_invoice_address.id
                 invoice_address.pk = self.selected_invoice_address.pk
                 invoice_address.save()
+                logger.debug('sync default to selected. Copied inv: %s' % (self.selected_invoice_address.pk))
             else:
                 invoice_address.id = None
                 invoice_address.pk = None
                 invoice_address.save()
                 self.save()
+                logger.debug('sync default to selected. New inv: %s' % (invoice_address.pk))
 
     def sync_selected_to_default_invoice_address(self, force=False):
         # Synchronize default invoice address with selected address
         auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or auto_update:
+            logger.debug('Sync selected to default invoice. Customer: %s' % self.pk)
             address = deepcopy(self.selected_invoice_address)
             address.id = self.default_invoice_address.id
             address.pk = self.default_invoice_address.pk
@@ -122,6 +131,7 @@ class Customer(models.Model):
         # Synchronize default shipping address with selected address
         auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or auto_update:
+            logger.debug('Sync selected to default shipping. Customer: %s' % self.pk)
             address = deepcopy(self.selected_shipping_address)
             address.id = self.default_shipping_address.id
             address.pk = self.default_shipping_address.pk

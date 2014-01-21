@@ -18,6 +18,9 @@ from lfs.payment import utils as payment_utils
 from lfs.shipping import utils as shipping_utils
 from lfs.voucher.models import Voucher
 
+import logging
+logger = logging.getLogger('addresses')
+
 
 def add_order(request):
     """Adds an order based on current cart for the current customer.
@@ -32,10 +35,15 @@ def add_order(request):
 
     invoice_address = customer.selected_invoice_address
     shipping_address = customer.selected_shipping_address
+    logger.debug('New order. Customer: %s. Invoice address pk: %s. Shipping address pk: %s' % (customer.pk,
+                                                                                               invoice_address.pk,
+                                                                                               shipping_address.pk))
     if not_required_address == 'shipping':
         if request.POST.get("no_shipping"):
+            logger.debug('no shipping')
             shipping_address = customer.selected_invoice_address
         else:
+            logger.debug('shipping')
             shipping_address = customer.selected_shipping_address
     else:
         if request.POST.get("no_invoice"):
@@ -111,6 +119,9 @@ def add_order(request):
     shipping_address.id = None
     shipping_address.pk = None
     shipping_address.save()
+
+    logger.debug('New order. Copied invoice address pk: %s. Copied shipping address pk: %s' % (invoice_address.pk,
+                                                                                               shipping_address.pk))
 
     order = Order.objects.create(
         user=user,
