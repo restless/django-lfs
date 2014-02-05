@@ -121,7 +121,7 @@ class Customer(models.Model):
         # Synchronize default invoice address with selected address
         auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or auto_update:
-            logger.debug('Sync selected to default invoice. Customer: %s' % self.pk)
+            logger.debug('Sync selected to default invoice. Customer: %s, Invoice address pk: %s' % (self.pk, self.selected_invoice_address.pk))
             address = deepcopy(self.selected_invoice_address)
             address.id = self.default_invoice_address.id
             address.pk = self.default_invoice_address.pk

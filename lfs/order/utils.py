@@ -110,6 +110,8 @@ def add_order(request):
         tax = 0
 
     # Copy addresses
+    logger.debug('Invoice address pk: %s, address: %s' % (invoice_address.pk, invoice_address))
+    orig_pk = invoice_address.pk
     invoice_address = deepcopy(invoice_address)
     invoice_address.id = None
     invoice_address.pk = None
@@ -120,8 +122,14 @@ def add_order(request):
     shipping_address.pk = None
     shipping_address.save()
 
-    logger.debug('New order. Copied invoice address pk: %s. Copied shipping address pk: %s' % (invoice_address.pk,
-                                                                                               shipping_address.pk))
+    from lfs.customer.models import Customer
+    cust = Customer.objects.get(pk=customer.pk)
+    old_address = cust.selected_invoice_address
+
+    logger.debug('New order. Copied invoice address pk: %s. Copied shipping address pk: %s, old inv address: %s (%s)' % (invoice_address.pk,
+                                                                                               shipping_address.pk,
+                                                                                               old_address,
+                                                                                               old_address.pk))
 
     order = Order.objects.create(
         user=user,
