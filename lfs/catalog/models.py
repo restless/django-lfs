@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.cache import cache
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.template.defaultfilters import striptags
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
@@ -191,7 +192,7 @@ class Category(models.Model):
         verbose_name_plural = _('Categories')
 
     def __unicode__(self):
-        return "%s (%s)" % (self.name, self.slug)
+        return u"%s (%s)" % (self.name, self.slug)
 
     def get_absolute_url(self):
         """
@@ -694,7 +695,7 @@ class Product(models.Model):
         ordering = ("name", )
 
     def __unicode__(self):
-        return "%s (%s)" % (self.name, self.slug)
+        return u"%s (%s)" % (self.name, self.slug)
 
     def save(self, *args, **kwargs):
         """
@@ -1027,7 +1028,7 @@ class Product(models.Model):
             md = self.meta_description
 
         md = md.replace("<name>", self.get_name())
-        md = md.replace("<short-description>", self.get_short_description())
+        md = md.replace("<short-description>", striptags(self.get_short_description()))
         return md
 
     # TODO: Check whether there is a test case for that and write one if not.
@@ -2008,7 +2009,7 @@ class ProductAccessories(models.Model):
         verbose_name_plural = "Product accessories"
 
     def __unicode__(self):
-        return "%s -> %s" % (self.product.name, self.accessory.name)
+        return u"%s -> %s" % (self.product.name, self.accessory.name)
 
     def get_price(self, request):
         """
@@ -2222,7 +2223,7 @@ class FilterStep(models.Model):
         ordering = ["start"]
 
     def __unicode__(self):
-        return "%s %s" % (self.property.name, self.start)
+        return u"%s %s" % (self.property.name, self.start)
 
 
 class GroupsPropertiesRelation(models.Model):
@@ -2355,7 +2356,7 @@ class ProductPropertyValue(models.Model):
         unique_together = ("product", "property", "value", "type")
 
     def __unicode__(self):
-        return "%s/%s: %s" % (self.product.name, self.property.name, self.value)
+        return u"%s/%s: %s" % (self.product.name, self.property.name, self.value)
 
     def save(self, *args, **kwargs):
         """
