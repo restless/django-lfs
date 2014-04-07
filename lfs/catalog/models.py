@@ -69,19 +69,19 @@ def get_unique_id_str():
 
 LFS_UNITS = []
 for u in settings.LFS_UNITS:
-    LFS_UNITS.append([u, u])
+    LFS_UNITS.append(list(u))
 
 LFS_PRICE_UNITS = []
 for u in settings.LFS_PRICE_UNITS:
-    LFS_PRICE_UNITS.append([u, u])
+    LFS_PRICE_UNITS.append(list(u))
 
 LFS_BASE_PRICE_UNITS = []
 for u in settings.LFS_BASE_PRICE_UNITS:
-    LFS_BASE_PRICE_UNITS.append([u, u])
+    LFS_BASE_PRICE_UNITS.append(list(u))
 
 LFS_PACKING_UNITS = []
 for u in settings.LFS_PACKING_UNITS:
-    LFS_PACKING_UNITS.append([u, u])
+    LFS_PACKING_UNITS.append(list(u))
 
 
 class Category(models.Model):
@@ -1405,9 +1405,9 @@ class Product(models.Model):
         a variant or not.
         """
         if self.is_variant():
-            return self.parent.price_unit
+            return self.parent.get_price_unit_display()
         else:
-            return self.price_unit
+            return self.get_price_unit_display()
 
     def get_unit(self):
         """
