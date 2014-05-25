@@ -564,7 +564,7 @@ msgid "Price unit"
 msgstr "Prix net"
 
 #: catalog/models.py:598
-msgid "Quanity field unit"
+msgid "Quantity field unit"
 msgstr ""
 
 #: catalog/models.py:601
@@ -4276,7 +4276,7 @@ msgstr "Nom"
 
 #: templates/manage/product/product_filters_inline.html:68
 #, fuzzy
-msgid "Fiter products"
+msgid "Filter products"
 msgstr "Modifier le produit"
 
 #: templates/manage/product/products.html:5

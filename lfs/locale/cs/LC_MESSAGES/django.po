@@ -553,7 +553,7 @@ msgid "Price unit"
 msgstr "Jednotka ceny"
 
 #: catalog/models.py:598
-msgid "Quanity field unit"
+msgid "Quantity field unit"
 msgstr "Jednotka množství"
 
 #: catalog/models.py:601
@@ -4111,7 +4111,7 @@ msgid "Name/SKU"
 msgstr "Název/SKU"
 
 #: templates/manage/product/product_filters_inline.html:68
-msgid "Fiter products"
+msgid "Filter products"
 msgstr "Filtrovat produkty"
 
 #: templates/manage/product/products.html:5
