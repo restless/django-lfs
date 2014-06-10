@@ -131,7 +131,7 @@
         <tr class="product-row">
             <td class="top">
                 {% if item.product.get_image.image %}
-                <a href="{% url lfs_manage_product item.product.id %}">
+                <a href="{% url 'lfs_manage_product' item.product.id %}">
                     <img alt="{{ item.product_name }}"
                          src="{{ item.product.get_image.image.url_100x100 }}" />
                  </a>
@@ -144,7 +144,7 @@
             </td>
             <td class="top">
                 {% if item.product %}
-                    <a href="{% url lfs_manage_product item.product.id %}">
+                    <a href="{% url 'lfs_manage_product' item.product.id %}">
                         {{ item.product_name }}
                     </a>
                 {% else %}
@@ -224,7 +224,7 @@
         <td class="number">
             {{ current_order.shipping_price|currency:request }}
         </td>
-        <td>{{ current_order.shipping_tax|currency:request }}</td>
+        <td class="number">{{ current_order.shipping_tax|currency:request }}</td>
         <td class="number">
             {{ current_order.shipping_price|currency:request }}
         </td>
@@ -241,7 +241,7 @@
         <td class="number">
             {{ current_order.payment_price|currency:request }}
         </td>
-        <td>{{ current_order.payment_tax|currency:request }}</td>
+        <td class="number">{{ current_order.payment_tax|currency:request }}</td>
         <td class="number">
             {{ current_order.payment_price|currency:request }}
         </td>

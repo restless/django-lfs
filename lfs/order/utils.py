@@ -8,9 +8,7 @@ from django.conf import settings
 import lfs.discounts.utils
 import lfs.voucher.utils
 from lfs.cart import utils as cart_utils
-from lfs.core.models import Country
 from lfs.core.signals import order_created
-from lfs.core.utils import import_module
 from lfs.core.utils import import_symbol
 from lfs.customer import utils as customer_utils
 from lfs.order.models import Order
@@ -19,6 +17,9 @@ from lfs.order.models import OrderItemPropertyValue
 from lfs.payment import utils as payment_utils
 from lfs.shipping import utils as shipping_utils
 from lfs.voucher.models import Voucher
+
+import logging
+logger = logging.getLogger('addresses')
 
 
 def add_order(request):
@@ -30,11 +31,25 @@ def add_order(request):
     customer = customer_utils.get_customer(request)
     order = None
 
+    not_required_address = getattr(settings, 'LFS_CHECKOUT_NOT_REQUIRED_ADDRESS', 'shipping')
+
     invoice_address = customer.selected_invoice_address
-    if request.POST.get("no_shipping"):
-        shipping_address = customer.selected_invoice_address
+    shipping_address = customer.selected_shipping_address
+    logger.debug('New order. Customer: %s. Invoice address pk: %s. Shipping address pk: %s' % (customer.pk,
+                                                                                               invoice_address.pk,
+                                                                                               shipping_address.pk))
+    if not_required_address == 'shipping':
+        if request.POST.get("no_shipping"):
+            logger.debug('no shipping')
+            shipping_address = customer.selected_invoice_address
+        else:
+            logger.debug('shipping')
+            shipping_address = customer.selected_shipping_address
     else:
-        shipping_address = customer.selected_shipping_address
+        if request.POST.get("no_invoice"):
+            invoice_address = customer.selected_shipping_address
+        else:
+            invoice_address = customer.selected_invoice_address
 
     cart = cart_utils.get_cart(request)
     if cart is None:
@@ -61,7 +76,7 @@ def add_order(request):
         customer_email = customer.selected_invoice_address.email
 
     # Calculate the totals
-    price = cart.get_price_gross(request) + shipping_costs["price"] + payment_costs["price"]
+    price = cart.get_price_gross(request) + shipping_costs["price_gross"] + payment_costs["price"]
     tax = cart.get_tax(request) + shipping_costs["tax"] + payment_costs["tax"]
 
     # Discounts
@@ -95,13 +110,26 @@ def add_order(request):
         tax = 0
 
     # Copy addresses
+    logger.debug('Invoice address pk: %s, address: %s' % (invoice_address.pk, invoice_address))
+    orig_pk = invoice_address.pk
     invoice_address = deepcopy(invoice_address)
     invoice_address.id = None
+    invoice_address.pk = None
     invoice_address.save()
 
     shipping_address = deepcopy(shipping_address)
     shipping_address.id = None
+    shipping_address.pk = None
     shipping_address.save()
+
+    from lfs.customer.models import Customer
+    cust = Customer.objects.get(pk=customer.pk)
+    old_address = cust.selected_invoice_address
+
+    logger.debug('New order. Copied invoice address pk: %s. Copied shipping address pk: %s, old inv address: %s (%s)' % (invoice_address.pk,
+                                                                                               shipping_address.pk,
+                                                                                               old_address,
+                                                                                               old_address.pk))
 
     order = Order.objects.create(
         user=user,
@@ -114,7 +142,7 @@ def add_order(request):
         customer_email=customer_email,
 
         shipping_method=shipping_method,
-        shipping_price=shipping_costs["price"],
+        shipping_price=shipping_costs["price_gross"],
         shipping_tax=shipping_costs["tax"],
         payment_method=payment_method,
         payment_price=payment_costs["price"],
@@ -196,8 +224,12 @@ def add_order(request):
             product_tax=-discount["tax"],
         )
 
+    # Re-initialize selected addresses to be equal to default addresses for next order
+    customer.sync_default_to_selected_addresses()
+    customer.save()
+
     # Send signal before cart is deleted.
-    order_created.send({"order":order, "cart": cart, "request": request})
+    order_created.send({"order": order, "cart": cart, "request": request})
 
     cart.delete()
 

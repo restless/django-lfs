@@ -1,12 +1,12 @@
 # django imports
-from django.template.loader import render_to_string
+from django.conf import settings
 from django.template.loader import select_template
 from django.template import RequestContext
 
 # lfs imports
 import lfs.core.utils
-from lfs.addresses.settings import INVOICE_ADDRESS_FORM
-from lfs.addresses.settings import SHIPPING_ADDRESS_FORM
+from lfs.addresses.settings import INVOICE_ADDRESS_FORM, SHIPPING_ADDRESS_FORM, CHECKOUT_NOT_REQUIRED_ADDRESS
+from lfs.core.models import Country
 
 # django-postal imports
 from postal.library import form_factory
@@ -105,7 +105,7 @@ class AddressManagement(object):
         """
         Returns True if the postal and the additional form is valid.
         """
-        if self.type == "shipping" and self.data.get("no_shipping"):
+        if self.type == CHECKOUT_NOT_REQUIRED_ADDRESS and self.data.get("no_%s" % CHECKOUT_NOT_REQUIRED_ADDRESS):
             return True
 
         if self.data:
@@ -123,7 +123,7 @@ class AddressManagement(object):
         """
         Saves the postal and the additional form.
         """
-        if self.type == "shipping" and self.data.get("no_shipping"):
+        if self.type == CHECKOUT_NOT_REQUIRED_ADDRESS and self.data.get("no_%s" % CHECKOUT_NOT_REQUIRED_ADDRESS):
             return
         else:
             self.address.line1 = self.data.get("%s-line1" % self.type)
@@ -131,10 +131,17 @@ class AddressManagement(object):
             self.address.city = self.data.get("%s-city" % self.type)
             self.address.state = self.data.get("%s-state" % self.type)
             self.address.zip_code = self.data.get("%s-code" % self.type)
-            self.address.country.code = self.data.get("%s-country" % self.type)
+
+            try:
+                country = Country.objects.get(code__iexact=self.data.get("%s-country" % self.type))
+                self.address.country = country
+            except Country.DoesNotExist:
+                pass
+
             self.address.customer = self.customer
             self.address.save()
 
             address_form_model = self.get_form_model()
-            address_form = address_form_model(data=self.data, instance=self.address, initial=self.initial, prefix=self.type)
+            address_form = address_form_model(data=self.data, instance=self.address, initial=self.initial,
+                                              prefix=self.type)
             address_form.save()

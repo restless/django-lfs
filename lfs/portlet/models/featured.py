@@ -10,8 +10,6 @@ from portlets.models import Portlet
 
 # lfs imports
 from lfs.catalog.models import Category
-from lfs.catalog.utils import get_current_top_category
-from lfs.caching.utils import lfs_get_object
 from lfs.marketing.models import FeaturedProduct
 
 
@@ -59,8 +57,14 @@ class FeaturedPortlet(Portlet):
     def form(self, **kwargs):
         """
         """
-        from lfs.portlet.forms import FeaturedForm
         return FeaturedForm(instance=self, **kwargs)
 
     def __unicode__(self):
-        return "%s" % self.id
+        return u"%s" % self.id
+
+
+class FeaturedForm(forms.ModelForm):
+    """
+    """
+    class Meta:
+        model = FeaturedPortlet

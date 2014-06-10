@@ -12,12 +12,11 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.utils import simplejson
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext as _
 
 # lfs imports
 import lfs.cart.utils
 import lfs.catalog.utils
-from lfs.customer.models import Customer
 from lfs.payment.models import PaymentMethod
 from lfs.shipping.models import ShippingMethod
 import lfs.voucher.utils
@@ -75,7 +74,7 @@ def cart_inline(request, template_name="lfs/cart/cart_inline.html"):
     payment_costs = payment_utils.get_payment_costs(request, selected_payment_method)
 
     # Cart costs
-    cart_price = cart.get_price_gross(request) + shipping_costs["price"] + payment_costs["price"]
+    cart_price = cart.get_price_gross(request) + shipping_costs["price_gross"] + payment_costs["price"]
     cart_tax = cart.get_tax(request) + shipping_costs["tax"] + payment_costs["tax"]
 
     # Discounts
@@ -123,12 +122,13 @@ def cart_inline(request, template_name="lfs/cart/cart_inline.html"):
         })
 
     return render_to_string(template_name, RequestContext(request, {
+        "cart": cart,
         "cart_items": cart_items,
         "cart_price": cart_price,
         "cart_tax": cart_tax,
         "shipping_methods": shipping_utils.get_valid_shipping_methods(request),
         "selected_shipping_method": selected_shipping_method,
-        "shipping_price": shipping_costs["price"],
+        "shipping_costs": shipping_costs,
         "payment_methods": payment_utils.get_valid_payment_methods(request),
         "selected_payment_method": selected_payment_method,
         "payment_price": payment_costs["price"],
@@ -141,7 +141,6 @@ def cart_inline(request, template_name="lfs/cart/cart_inline.html"):
         "voucher_number": voucher_number,
         "voucher_value": voucher_value,
         "voucher_tax": voucher_tax,
-        "voucher_number": lfs.voucher.utils.get_current_voucher_number(request),
         "voucher_message": voucher_message,
     }))
 
@@ -163,6 +162,7 @@ def added_to_cart(request, template_name="lfs/cart/added_to_cart.html"):
         "cart_items_count": cart_items_count,
         "shopping_url": request.META.get("HTTP_REFERER", "/"),
         "product_accessories": accessories,
+        "product": cart_items[0].product if cart_items else None,
         "cart_items": added_to_cart_items(request),
     }))
 
@@ -198,12 +198,16 @@ def add_accessory_to_cart(request, product_id, quantity=1):
     Adds the product with passed product_id as an accessory to the cart and
     updates the added-to-cart view.
     """
-    try:
-        quantity = float(quantity)
-    except TypeError:
-        quantity = 1
-
     product = lfs_get_object_or_404(Product, pk=product_id)
+    # for product with variants add default variant
+    if product.is_product_with_variants():
+        variant = product.get_default_variant()
+        if variant:
+            product = variant
+        else:
+            return HttpResponse(added_to_cart_items(request))
+
+    quantity = product.get_clean_quantity_value(quantity)
 
     session_cart_items = request.session.get("cart_items", [])
     cart = cart_utils.get_cart(request)
@@ -235,17 +239,11 @@ def add_to_cart(request, product_id=None):
     product = lfs_get_object_or_404(Product, pk=product_id)
 
     # Only active and deliverable products can be added to the cart.
-    if (product.is_active() and product.is_deliverable()) == False:
+    if not (product.is_active() and product.is_deliverable()):
         raise Http404()
 
-    try:
-        value = request.POST.get("quantity", "1.0")
-        if isinstance(value, unicode):
-            # atof() on unicode string fails in some environments, like Czech
-            value = value.encode("utf-8")
-        quantity = locale.atof(value)
-    except (TypeError, ValueError):
-        quantity = 1.0
+    quantity = request.POST.get("quantity", "1.0")
+    quantity = product.get_clean_quantity_value(quantity)
 
     # Validate properties (They are added below)
     properties_dict = {}
@@ -257,37 +255,37 @@ def add_to_cart(request, product_id=None):
                 except IndexError:
                     continue
                 try:
-                    property = Property.objects.get(pk=property_id)
+                    prop = Property.objects.get(pk=property_id)
                 except Property.DoesNotExist:
                     continue
 
-                if property.is_number_field:
+                if prop.is_number_field:
                     try:
                         value = lfs.core.utils.atof(value)
                     except ValueError:
-                        value = locale.atof("0.0")
+                        value = 0.0
 
                 properties_dict[property_id] = unicode(value)
 
                 # validate property's value
-                if property.is_number_field:
+                if prop.is_number_field:
 
-                    if (value < property.unit_min) or (value > property.unit_max):
-                        msg = _(u"%(name)s must be between %(min)s and %(max)s %(unit)s.") % {"name": property.title, "min": property.unit_min, "max": property.unit_max, "unit": property.unit}
+                    if (value < prop.unit_min) or (value > prop.unit_max):
+                        msg = _(u"%(name)s must be between %(min)s and %(max)s %(unit)s.") % {"name": prop.title, "min": prop.unit_min, "max": prop.unit_max, "unit": prop.unit}
                         return lfs.core.utils.set_message_cookie(
                             product.get_absolute_url(), msg)
 
                     # calculate valid steps
                     steps = []
-                    x = property.unit_min
-                    while x < property.unit_max:
+                    x = prop.unit_min
+                    while x < prop.unit_max:
                         steps.append("%.2f" % x)
-                        x = x + property.unit_step
-                    steps.append("%.2f" % property.unit_max)
+                        x += prop.unit_step
+                    steps.append("%.2f" % prop.unit_max)
 
                     value = "%.2f" % value
                     if value not in steps:
-                        msg = _(u"Your entered value for %(name)s (%(value)s) is not in valid step width, which is %(step)s.") % {"name": property.title, "value": value, "step": property.unit_step}
+                        msg = _(u"Your entered value for %(name)s (%(value)s) is not in valid step width, which is %(step)s.") % {"name": prop.title, "value": value, "step": prop.unit_step}
                         return lfs.core.utils.set_message_cookie(
                             product.get_absolute_url(), msg)
 
@@ -303,9 +301,9 @@ def add_to_cart(request, product_id=None):
     message = ""
     if product.manage_stock_amount and cart_item.amount > product.stock_amount and not product.order_time:
         if product.stock_amount == 0:
-            message = _(u"Sorry, but '%(product)s' is not available anymore." % {"product": product.name})
+            message = _(u"Sorry, but '%(product)s' is not available anymore.") % {"product": product.name}
         elif product.stock_amount == 1:
-            message = _(u"Sorry, but '%(product)s' is only one time available." % {"product": product.name})
+            message = _(u"Sorry, but '%(product)s' is only one time available.") % {"product": product.name}
         else:
             message = _(u"Sorry, but '%(product)s' is only %(amount)s times available.") % {"product": product.name, "amount": product.stock_amount}
         cart_item.amount = product.stock_amount
@@ -320,12 +318,17 @@ def add_to_cart(request, product_id=None):
             except ObjectDoesNotExist:
                 continue
 
+            # for product with variants add default variant
+            if accessory.is_product_with_variants():
+                accessory_variant = accessory.get_default_variant()
+                if accessory_variant:
+                    accessory = accessory_variant
+                else:
+                    continue
+
             # Get quantity
             quantity = request.POST.get("quantity-%s" % accessory_id, 0)
-            try:
-                quantity = float(quantity)
-            except TypeError:
-                quantity = 1
+            quantity = accessory.get_clean_quantity_value(quantity)
 
             cart_item = cart.add(product=accessory, amount=quantity)
             cart_items.append(cart_item)
@@ -402,14 +405,8 @@ def refresh_cart(request):
     # Update Amounts
     message = ""
     for item in cart.get_items():
-        try:
-            value = request.POST.get("amount-cart-item_%s" % item.id, "0.0")
-            if isinstance(value, unicode):
-                # atof() on unicode string fails in some environments, like Czech
-                value = value.encode("utf-8")
-            amount = locale.atof(value)
-        except (TypeError, ValueError):
-            amount = 1.0
+        amount = request.POST.get("amount-cart-item_%s" % item.id, "0.0")
+        amount = item.product.get_clean_quantity_value(amount, allow_zero=True)
 
         if item.product.manage_stock_amount and amount > item.product.stock_amount and not item.product.order_time:
             amount = item.product.stock_amount
@@ -422,7 +419,6 @@ def refresh_cart(request):
                 message = _(u"Sorry, but '%(product)s' is only one time available." % {"product": item.product.name})
             else:
                 message = _(u"Sorry, but '%(product)s' is only %(amount)s times available.") % {"product": item.product.name, "amount": amount}
-
 
         if item.product.get_active_packing_unit():
             item.amount = item.product.get_amount_by_packages(float(amount))
@@ -458,7 +454,7 @@ def refresh_cart(request):
         "message": message,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def check_voucher(request):
@@ -472,4 +468,4 @@ def check_voucher(request):
         "html": (("#cart-inline", cart_inline(request)),)
     })
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')

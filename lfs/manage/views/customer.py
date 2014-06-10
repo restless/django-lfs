@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 
 # django imports
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import EmptyPage
@@ -75,13 +76,19 @@ def customers_filters_inline(request, template_name="manage/customer/customers_f
 
     customers = []
     for customer in page.object_list:
+        query = Q()
+        if customer.session:
+            query |= Q(session=customer.session)
+        if customer.user:
+            query |= Q(user=customer.user)
+
         try:
-            cart = Cart.objects.get(session=customer.session)
+            cart = Cart.objects.get(query)
             cart_price = cart.get_price_gross(request, total=True)
         except Cart.DoesNotExist:
             cart_price = None
 
-        orders = Order.objects.filter(session=customer.session)
+        orders = Order.objects.filter(query)
         customers.append({
             "customer": customer,
             "orders": len(orders),
@@ -102,13 +109,17 @@ def customers_filters_inline(request, template_name="manage/customer/customers_f
 def customer_inline(request, customer_id, template_name="manage/customer/customer_inline.html"):
     """Displays customer with provided customer id.
     """
-    customer_filters = request.session.get("customer-filters", {})
     customer = lfs_get_object_or_404(Customer, pk=customer_id)
-    orders = Order.objects.filter(session=customer.session)
+
+    query = Q()
+    if customer.session:
+        query |= Q(session=customer.session)
+    if customer.user:
+        query |= Q(user=customer.user)
+    orders = Order.objects.filter(query)
 
     try:
-        cart = Cart.objects.get(session=customer.session)
-        cart_price = cart.get_price_gross(request)
+        cart = Cart.objects.get(query)
     except Cart.DoesNotExist:
         cart = None
         cart_price = None
@@ -121,7 +132,7 @@ def customer_inline(request, customer_id, template_name="manage/customer/custome
         selected_payment_method = lfs.payment.utils.get_selected_payment_method(request)
         payment_costs = lfs.payment.utils.get_payment_costs(request, selected_payment_method)
 
-        cart_price = cart.get_price_gross(request) + shipping_costs["price"] + payment_costs["price"]
+        cart_price = cart.get_price_gross(request) + shipping_costs["price_gross"] + payment_costs["price"]
 
     if customer.selected_shipping_address:
         shipping_address = customer.selected_shipping_address.as_html(request, "shipping")
@@ -159,13 +170,22 @@ def customers_inline(request, template_name="manage/customer/customers_inline.ht
 
     customers = []
     for customer in page.object_list:
+        if not customer.user_id and not customer.session:
+            continue
+
+        query = Q()
+        if customer.session:
+            query |= Q(session=customer.session)
+        if customer.user:
+            query |= Q(user=customer.user)
+
         try:
-            cart = Cart.objects.get(session=customer.session)
+            cart = Cart.objects.get(query)
             cart_price = cart.get_price_gross(request, total=True)
         except Cart.DoesNotExist:
             cart_price = None
 
-        orders = Order.objects.filter(session=customer.session)
+        orders = Order.objects.filter(query)
         customers.append({
             "customer": customer,
             "orders": len(orders),
@@ -219,7 +239,7 @@ def set_selectable_customers_page(request):
         "html": (("#selectable-customers-inline", result),),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -233,7 +253,7 @@ def set_customers_page(request):
         ),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -241,11 +261,11 @@ def set_ordering(request, ordering):
     """Sets customer ordering given by passed request.
     """
     if ordering == "lastname":
-        ordering = "selected_invoice_address__lastname"
+        ordering = "addresses__lastname"
     elif ordering == "firstname":
-        ordering = "selected_invoice_address__firstname"
+        ordering = "addresses__firstname"
     elif ordering == "email":
-        ordering = "selected_invoice_address__email"
+        ordering = "user__email"
 
     if ordering == request.session.get("customer-ordering"):
         if request.session.get("customer-ordering-order") == "":
@@ -269,7 +289,7 @@ def set_ordering(request, ordering):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -302,7 +322,7 @@ def set_customer_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -329,7 +349,7 @@ def reset_customer_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 # Private Methods
@@ -349,6 +369,6 @@ def _get_filtered_customers(request, customer_filters):
         customers = customers.filter(f)
 
     # Ordering
-    customers = customers.order_by("%s%s" % (customer_ordering_order, customer_ordering))
+    customers = customers.distinct().order_by("%s%s" % (customer_ordering_order, customer_ordering))
 
     return customers

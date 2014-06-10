@@ -52,6 +52,7 @@ from lfs.catalog.models import StaticBlock
 from lfs.catalog.models import ProductAttachment
 from lfs.core.signals import product_changed
 from lfs.core.signals import product_removed_property_group
+from lfs.manufacturer.models import Manufacturer
 from lfs.tax.models import Tax
 from lfs.tests.utils import RequestFactory
 
@@ -59,6 +60,8 @@ from lfs.tests.utils import RequestFactory
 class PriceFilterTestCase(TestCase):
     """
     """
+    fixtures = ['lfs_shop.xml', "lfs_user.xml"]
+
     def setUp(self):
         """
         """
@@ -73,7 +76,7 @@ class PriceFilterTestCase(TestCase):
     def test_get_price_filter_1(self):
         """
         """
-        result = lfs.catalog.utils.get_price_filters(self.c1, [], None)
+        result = lfs.catalog.utils.get_price_filters(self.c1, [], None, [])
         self.assertEqual(result["show_reset"], False)
         self.assertEqual(result["show_quantity"], True)
         self.assertEqual(result["items"][0]["min"], 1)
@@ -93,7 +96,7 @@ class PriceFilterTestCase(TestCase):
         self.p3.price = 300
         self.p3.save()
 
-        result = lfs.catalog.utils.get_price_filters(self.c1, [], None)
+        result = lfs.catalog.utils.get_price_filters(self.c1, [], None, [])
         self.assertEqual(result["show_reset"], False)
         self.assertEqual(result["show_quantity"], True)
         self.assertEqual(result["items"][0]["quantity"], 1)
@@ -105,9 +108,39 @@ class PriceFilterTestCase(TestCase):
         self.assertEqual(result["items"][2]["quantity"], 1)
 
 
+class ManufacturerFilterTestCase(TestCase):
+    """
+    """
+    fixtures = ['lfs_shop.xml', "lfs_user.xml"]
+
+    def setUp(self):
+        """
+        """
+        self.m1 = Manufacturer.objects.create(name='M1', slug='m1')
+        self.m2 = Manufacturer.objects.create(name='M2', slug='m2')
+
+        self.p1 = Product.objects.create(slug="product-1", price=5, active=True, manufacturer=self.m1)
+        self.p2 = Product.objects.create(slug="product-2", price=3, active=True, manufacturer=self.m2)
+        self.p3 = Product.objects.create(slug="product-3", price=1, active=True, manufacturer=self.m2)
+
+        self.c1 = Category.objects.create(name="Category 1", slug="category-1")
+        self.c1.products = [self.p1, self.p2, self.p3]
+        self.c1.save()
+
+    def test_get_manufacturer_filter_1(self):
+        """
+        """
+        result = lfs.catalog.utils.get_manufacturer_filters(self.c1, [], None, [])
+        self.assertEqual(result["show_reset"], False)
+        self.assertFalse(result["items"][0]['selected'])
+        self.assertEqual(len(result["items"]), 2)
+
+
 class PropertiesTestCase(TestCase):
     """
     """
+    fixtures = ['lfs_shop.xml', "lfs_user.xml"]
+
     def setUp(self):
         """
         """
@@ -582,6 +615,8 @@ class PropertiesTestCase(TestCase):
 class PropertiesTestCaseWithoutProperties(TestCase):
     """Test the filter methods without added properties.
     """
+    fixtures = ['lfs_shop.xml', "lfs_user.xml"]
+
     def setUp(self):
         """
         """
@@ -597,7 +632,7 @@ class PropertiesTestCaseWithoutProperties(TestCase):
         """
         """
         # This tests the according SQL within get_product_filters
-        f = lfs.catalog.utils.get_product_filters(self.c1, [], None, None)
+        f = lfs.catalog.utils.get_product_filters(self.c1, [], None, None, None)
         self.assertEqual(f, [])
 
 
@@ -1177,7 +1212,8 @@ class ViewsTestCase(TestCase):
         """
         url = reverse("lfs_category", kwargs={"slug": "category-1", "category_id": 1})
         response = self.client.get(url, {'sorting': ''})
-        templates = [t.name for t in response.template]
+
+        templates = [t.name for t in response.templates]
 
         # By default the products of a category should be displayed
         self.failIf("lfs/catalog/categories/product/default.html" not in templates)
@@ -1188,7 +1224,7 @@ class ViewsTestCase(TestCase):
         self.c1.save()
 
         response = self.client.get(url, {'sorting': ''})
-        templates = [t.name for t in response.template]
+        templates = [t.name for t in response.templates]
 
         # Now the categories template should be used
         self.failIf("lfs/catalog/categories/product/default.html" in templates)
@@ -2731,6 +2767,7 @@ class ProductTestCase(TestCase):
         self.assertEqual(len(Product.objects.all()), 5)
 
         product = Product.objects.get(slug="product-1")
+        all_props = product.get_property_select_fields()
 
         variant_data = {
             'slug': 'variant-slug',

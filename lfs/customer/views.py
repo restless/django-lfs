@@ -174,6 +174,7 @@ def orders(request, template_name="lfs/customer/orders.html"):
         "orders": orders,
         "options": options,
         "date_filter": date_filter,
+        "current": "orders",
         'uses_modeltranslation': uses_modeltranslation()
     }))
 
@@ -188,6 +189,7 @@ def order(request, id, template_name="lfs/customer/order.html"):
     return render_to_response(template_name, RequestContext(request, {
         "current_order": order,
         "orders": orders,
+        "current": "orders",
         'uses_modeltranslation': uses_modeltranslation()
     }))
 
@@ -200,6 +202,7 @@ def account(request, template_name="lfs/customer/account.html"):
 
     return render_to_response(template_name, RequestContext(request, {
         "user": user,
+        "current": "welcome",
         'uses_modeltranslation': uses_modeltranslation()
     }))
 
@@ -212,11 +215,15 @@ def addresses(request, template_name="lfs/customer/addresses.html"):
     customer = lfs.customer.utils.get_or_create_customer(request)
 
     if request.method == "POST":
-        iam = AddressManagement(customer, customer.selected_invoice_address, "invoice", request.POST)
-        sam = AddressManagement(customer, customer.selected_shipping_address, "shipping", request.POST)
+        iam = AddressManagement(customer, customer.default_invoice_address, "invoice", request.POST)
+        sam = AddressManagement(customer, customer.default_shipping_address, "shipping", request.POST)
+
         if iam.is_valid() and sam.is_valid():
             iam.save()
             sam.save()
+
+            customer.sync_default_to_selected_addresses(force=True)
+
             return lfs.core.utils.MessageHttpResponseRedirect(
                 redirect_to=reverse("lfs_my_addresses"),
                 msg=_(u"Your addresses have been saved."),
@@ -225,13 +232,14 @@ def addresses(request, template_name="lfs/customer/addresses.html"):
             msg = _(u"An error has occured.")
     else:
         msg = None
-        iam = AddressManagement(customer, customer.selected_invoice_address, "invoice")
-        sam = AddressManagement(customer, customer.selected_shipping_address, "shipping")
+        iam = AddressManagement(customer, customer.default_invoice_address, "invoice")
+        sam = AddressManagement(customer, customer.default_shipping_address, "shipping")
 
     return lfs.core.utils.render_to_message_response(
         template_name, RequestContext(request, {
             "shipping_address_inline": sam.render(request),
             "invoice_address_inline": iam.render(request),
+            "current": "addresses",
             'uses_modeltranslation': uses_modeltranslation()
         }),
         msg=msg,
@@ -255,6 +263,7 @@ def email(request, template_name="lfs/customer/email.html"):
 
     return render_to_response(template_name, RequestContext(request, {
         "email_form": email_form,
+        "current": "email",
         'uses_modeltranslation': uses_modeltranslation()
     }))
 
@@ -268,12 +277,13 @@ def password(request, template_name="lfs/customer/password.html"):
         if form.is_valid():
             form.save()
             return lfs.core.utils.set_message_cookie(reverse("lfs_my_password"),
-                                                     msg=_(u"Your e-mail has been changed."))
+                                                     msg=_(u"Your password has been changed."))
     else:
         form = PasswordChangeForm(request.user)
 
     return render_to_response(template_name, RequestContext(request, {
         "form": form,
+        "current": "password",
         'uses_modeltranslation': uses_modeltranslation()
     }))
 

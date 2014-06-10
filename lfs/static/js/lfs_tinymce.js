@@ -45,17 +45,14 @@ function addEditor(selector, hide_save, height) {
    });
 }
 
-
-var TINYMCE_FIELD_IDS = [{id: "#id_description", hide_save: false, height: null},
-                         {id: "#id_short_description", hide_save: false, height: '200'},
-                         {id: "#id_short_text", hide_save: false, height: '200'},
-                         {id: "#id_body", hide_save: false, height: null},
-                         {id: "#id_html", hide_save: false, height: null},
-                         {id: "#id_note", hide_save: false, height: '100'}
-];
-
 function update_editor() {
     /* for each field first detach tinymce and then attach again */
+    var TINYMCE_FIELD_IDS = [{id: '#id_description'},
+                             {id: '#id_short_description'},
+                             {id: "#id_short_text"},
+                             {id: "#id_body"},
+                             {id: '#id_html'},
+                             {id: '#id_note'}];
     $.each(TINYMCE_FIELD_IDS, function(idx, item){
         // translated fields
         $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
@@ -67,8 +64,7 @@ function update_editor() {
                 addEditor(item['id'] + "_" + lang, item['hide_save'], item['height']);
             }
         });
-
-        // not translated fields
+        
         if (typeof(tinyMCE) != 'undefined'){
             var obj = $(item['id']);
             if (obj.length > 0){
@@ -78,7 +74,6 @@ function update_editor() {
         addEditor(item['id'], item['hide_save'], item['height']);
     });
 }
-
 
 function save(ed) {
     $("#" + ed.id).parents("form:first").ajaxSubmit({
@@ -97,7 +92,7 @@ function imagebrowser(e, ed) {
     klass = node.className || ""
     var id = $("#obj-id").attr("data");
     $.get(LFS_MANAGE_IMAGEBROWSER_URL + "?url=" + url + "&title=" + title + "&class=" + klass, function(data) {
-        data = $.parseJSON(data);
+        data = safeParseJSON(data);
         $("#dialog").html(data["html"]);
     });
 

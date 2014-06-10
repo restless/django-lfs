@@ -68,7 +68,7 @@ class Order(models.Model):
 
     customer_firstname = models.CharField(_(u"firstname"), max_length=50)
     customer_lastname = models.CharField(_(u"lastname"), max_length=50)
-    customer_email = models.CharField(_(u"email"), max_length=50)
+    customer_email = models.CharField(_(u"email"), max_length=75)
 
     sa_content_type = models.ForeignKey(ContentType, related_name="order_shipping_address")
     sa_object_id = models.PositiveIntegerField()
@@ -105,7 +105,7 @@ class Order(models.Model):
         ordering = ("-created", )
 
     def __unicode__(self):
-        return "%s (%s %s)" % (self.created.strftime("%x %X"), self.customer_firstname, self.customer_lastname)
+        return u"%s (%s %s)" % (self.created.strftime("%x %X"), self.customer_firstname, self.customer_lastname)
 
     def get_pay_link(self, request):
         """
@@ -130,8 +130,10 @@ class Order(models.Model):
             if order_item.product is not None:
                 order_name = order_name + order_item.product.get_name() + ", "
 
-        order_name.strip(', ')
-        return order_name
+        return order_name.strip(', ')
+
+    def price_net(self):
+        return self.price - self.tax
 
 
 class OrderItem(models.Model):
@@ -157,7 +159,7 @@ class OrderItem(models.Model):
     product_tax = models.FloatField(_(u"Product tax"), default=0.0)
 
     def __unicode__(self):
-        return "%s" % self.product_name
+        return u"%s" % self.product_name
 
     @property
     def amount(self):

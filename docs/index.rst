@@ -9,6 +9,7 @@ Introduction
 
    introduction/overview.rst
    introduction/installation.rst
+   introduction/upgrade_notes.rst
    introduction/getting_started.rst
 
 .. _index_users:
@@ -107,6 +108,7 @@ Miscellaneous
 
    developer/api.rst
    developer/settings.rst
+   developer/management_commands.rst
 
 .. _index_developers_howtos:
 

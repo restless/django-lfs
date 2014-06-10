@@ -5,11 +5,7 @@ from django.core.cache import cache
 from django.core.urlresolvers import reverse
 
 # lfs imports
-from lfs.cart.models import CartItem
 from lfs.cart.models import Cart
-from lfs.payment import utils as payment_utils
-from lfs.shipping import utils as shipping_utils
-from lfs.voucher.models import Voucher
 
 # Load logger
 import logging
@@ -56,7 +52,12 @@ def get_cart(request):
             cache_key = "%s-cart-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, user.pk)
             cart = cache.get(cache_key)
             if cart is None:
-                cart = Cart.objects.get(user=user)
+                try:
+                    cart = Cart.objects.get(user=user)
+                except Cart.MultipleObjectsReturned:
+                    carts = Cart.objects.filter(user=user)
+                    cart = carts[0]
+                    carts.exclude(pk=cart.pk).delete()
                 cache.set(cache_key, cart)
             return cart
         except ObjectDoesNotExist:
@@ -66,7 +67,12 @@ def get_cart(request):
             cache_key = "%s-cart-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, session_key)
             cart = cache.get(cache_key)
             if cart is None:
-                cart = Cart.objects.get(session=session_key)
+                try:
+                    cart = Cart.objects.get(session=session_key)
+                except Cart.MultipleObjectsReturned:
+                    carts = Cart.objects.filter(session=session_key)
+                    cart = carts[0]
+                    carts.exclude(pk=cart.pk).delete()
                 cache.set(cache_key, cart)
             return cart
         except ObjectDoesNotExist:

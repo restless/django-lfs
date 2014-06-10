@@ -3,6 +3,7 @@ body {
     font-size: 12px;
     background-color: #fff !important;
     font-family: Verdana;
+    margin: 0;
 }
 
 
@@ -173,7 +174,6 @@ table.lfs-manage-table.top td {
 td.left-slot {
   padding: 10px 20px 0 0;
   width: 200px;
-  min-width: 150px;
 }
 
 td.middle-slot {
@@ -378,33 +378,27 @@ td.management {
 
 .up {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 16px;
     background: url(../icons/arrow_up.png) no-repeat;
     text-decoration: none;
 }
 
 .down {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 16px;
     background: url(../icons/arrow_down.png) no-repeat;
     text-decoration: none;
 }
-
 a.add {
     margin: 0 10px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 18px;
     background: url(../icons/add.png) no-repeat;
-    padding-left: 20px;
 }
 
 
 a.delete {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 16px;
     background: url(../icons/cross.png) no-repeat;
 }
 
@@ -415,29 +409,25 @@ a.export {
 
 a.overview {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 20px;
     background: url(../icons/arrow_up.png) no-repeat;
 }
 
 a.preview {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 18px;
     background: url(../icons/zoom.png) no-repeat;
 }
 
 a.reset {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 18px;
     background: url(../icons/cancel.png) no-repeat;
 }
 
 a.send {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 22px;
     background: url(../icons/email.png) no-repeat;
 }
 
@@ -462,15 +452,13 @@ a.last {
 }
 
 a.view {
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 20px;
     background: url(../icons/zoom.png) no-repeat;
 }
 
 a.edit {
     margin: 0 5px;
-    min-width: 16px;
-    min-height:16px;
+    padding-left: 16px;
     background: url(../icons/pencil.png) no-repeat;
 }
 
@@ -583,14 +571,6 @@ select.categories {
 #id_stock-active_packing_unit,
 #id_stock-packing_unit_unit {
     width: 167px;
-}
-
-#options #id_position{
-    width: auto;
-}
-
-tr.add-row td {
-    padding-bottom: 20px;
 }
 
 #id_country, #id_countries, #id_slot, #id_portlet-title, #id_default_variant,
@@ -807,6 +787,13 @@ div.separator {
 .handle {
     cursor: move;
     padding: 0 3px;
+    display: block;
+    float: left;
+}
+
+.sortable-item-name {
+    overflow: hidden;
+    display: block;
 }
 
 .placeholder {
@@ -840,34 +827,59 @@ ol {
     width: 150px;
 }
 
+.manage-images div.lfs-pagination, #imagebrowser div.lfs-pagination {
+    padding: 10px;
+    font-size: 12px;
+}
+
 .manage-images .input {
     padding: 0;
     margin: 0;
 }
 
-.manage-images .image-form {
-    float: left;
+.image-form {
+    vertical-align: top;
+    display: inline-block;
     margin: 10px;
+    position: relative;
+    width: 120px;
 }
 
-.manage-images .image {
+.image-form .image-title {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.image-form label.image-selector {
+    position: absolute;
+    display: block;
+    background-color: #eaea44;
+    padding: 3px;
+    top: -2px;
+    left: -2px;
+    -webkit-box-shadow: 2px 2px 3px 0px #888888;
+    -moz-box-shadow: 2px 2px 3px 0px #888888;
+    -ms-box-shadow: 2px 2px 3px 0px #888888;
+    -o-box-shadow: 2px 2px 3px 0px #888888;
+    box-shadow: 2px 2px 3px 0px #888888;
+    border: 1px solid #444444;
+    cursor: pointer;
+}
+
+.image-form input{
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+}
+
+.image-form .image {
     height: 100px;
     width: 100px;
     border: 1px solid #aaa;
     padding:10px;
 }
 
-#imagebrowser .image-form {
-    float: left;
-    margin: 10px;
-}
-
-#imagebrowser div.image {
-    height: 100px;
-    width: 100px;
-    border: 1px solid #aaa;
-    padding:10px;
-}
 
 /* lfs pagination */
 div.lfs-pagination span.current {
@@ -884,40 +896,12 @@ div.lfs-pagination a:hover{
 }
 
 
-/* errorlist */
-ul.errorlist{
-    list-style-type: none;
-    padding-left: 0px;
+div.product-properties-info {
+    font-size: 0.8em;
+    padding-left: 10px;
 }
 
-ul.errorlist li{
-    color: #ff2222;
-    margin-left: 0px;
-}
-
-
-/* variants */
-#variants-form table td, #variants-form table th {
-    white-space: nowrap;
-}
-
-.property-edit-field fieldset{
-    display: inline-block;
-    margin: 5px;
-}
-
-.property-edit-field div.label{
-    display: inline-block;
-    min-width: 110px;
-}
-
-.ui-widget-content a {
-    display: inline-block;
-    vertical-align: top;
-}
-
-div.translated-field div.label {
-    display: inline-block;
-    min-width: 30px;
-    text-align: right;
+div.product-properties-info div{
+    margin-bottom: 3px;
+    margin-top: 3px;
 }

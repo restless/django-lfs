@@ -148,10 +148,47 @@ LFS_RECENT_PRODUCTS_LIMIT
     The amount of recent products which are displayed within the recent
     products portlet, e.g. 3.
 
+
+.. _settings_orders:
+
+Orders
+======
+
+LFS_EXTRA_ORDER_STATES
+    Extra states for orders, eg. if you need to mark order as Delivered or such. Should be list of tuples, each
+    containing id and label. Note that id should start from high number (20 or higher) to avoid conflicts if some new
+    ORDER_STATES are added to LFS core. Example value might be: [(20, _('Delivered'))]
+
+    There is a signal: order_state_changed that is sent when order state was changed and can be used for some special
+    processing.
+
+    .. code-block:: python
+
+        def handle_order_state_changed(sender, order, request, old_state, **kwargs):
+            pass
+        order_state_changed.connect(handle_order_state_changed)
+
+
 .. _settings_addresses:
 
 Addresses
 =========
+
+LFS_AUTO_UPDATE_DEFAULT_ADDRESSES
+    If True then default shipping and invoice addresses (set
+    by customer in his account settings) are automatically updated to the values
+    from last order. Else, default addresses are untouched and are used
+    as defaults in every new order. This setting is optional, the default value
+    is ``True``.
+
+LFS_CHECKOUT_NOT_REQUIRED_ADDRESS
+    During checkout it is possible to not fill in one of the addresses - it will be then copied from another one.
+    By default Shipping address is same as Invoice address, but it can be changed with this setting.
+    Possible values are: ``shipping`` and ``invoice``. Default is ``shipping``.
+    Note that you'll have to manually change checkout page template and lfs.js if you change it to ``invoice``.
+
+    By default checkout_form (used at one_page_checkout.html) has method: ``no_address_field`` that will return either
+    ``no_shipping`` or ``no_invoice`` field, depending on this setting.
 
 Plugins
 -------

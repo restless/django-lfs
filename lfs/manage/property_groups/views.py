@@ -32,8 +32,8 @@ def manage_property_groups(request):
     """The main view to manage properties.
     """
     try:
-        property = PropertyGroup.objects.all()[0]
-        url = reverse("lfs_manage_property_group", kwargs={"id": property.id})
+        prop = PropertyGroup.objects.all()[0]
+        url = reverse("lfs_manage_property_group", kwargs={"id": prop.id})
     except IndexError:
         url = reverse("lfs_manage_no_property_groups")
 
@@ -79,12 +79,15 @@ def properties_inline(request, id, template_name="manage/property_groups/propert
     """
     property_group = get_object_or_404(PropertyGroup, pk=id)
 
-    gps = GroupsPropertiesRelation.objects.filter(group=id)
+    gps = GroupsPropertiesRelation.objects.filter(group=id).select_related('property')
 
     # Calculate assignable properties
-    assigned_property_ids = [p.property.id for p in gps]
-    assignable_properties = Property.objects.exclude(
-        pk__in=assigned_property_ids).exclude(local=True)
+    #assigned_property_ids = [p.property.id for p in gps]
+    #assignable_properties = Property.objects.exclude(
+    #    pk__in=assigned_property_ids).exclude(local=True)
+
+    assignable_properties = Property.objects.exclude(local=True).exclude(groupspropertiesrelation__in=gps)
+    assignable_properties = assignable_properties.order_by('name')
 
     return render_to_string(template_name, RequestContext(request, {
         "property_group": property_group,
@@ -144,7 +147,7 @@ def assign_properties(request, group_id):
         "message": _(u"Properties have been assigned.")
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -178,7 +181,7 @@ def update_properties(request, group_id):
         "message": message
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 # Product tab
@@ -197,12 +200,11 @@ def products_tab(request, product_group_id, template_name="manage/property_group
 
 @permission_required("core.manage_shop")
 def products_inline(request, product_group_id, as_string=False,
-    template_name="manage/property_groups/products_inline.html"):
+                    template_name="manage/property_groups/products_inline.html"):
     """Renders the products tab of the property groups management views.
     """
     property_group = PropertyGroup.objects.get(pk=product_group_id)
-    group_products = property_group.products.all()
-    group_product_ids = [p.id for p in group_products]
+    group_products = property_group.products.all().select_related('parent')
 
     r = request.REQUEST
     s = request.session
@@ -246,8 +248,8 @@ def products_inline(request, product_group_id, as_string=False,
 
             filters &= Q(categories__in=categories)
 
-    products = Product.objects.filter(filters)
-    paginator = Paginator(products.exclude(pk__in=group_product_ids), 25)
+    products = Product.objects.select_related('parent').filter(filters)
+    paginator = Paginator(products.exclude(pk__in=group_products), 25)
 
     try:
         page = paginator.page(page)
@@ -268,7 +270,7 @@ def products_inline(request, product_group_id, as_string=False,
         return HttpResponse(
             simplejson.dumps({
                 "html": [["#products-inline", result]],
-            }))
+            }), mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -289,7 +291,7 @@ def assign_products(request, group_id):
         "message": _(u"Products have been assigned.")
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -313,7 +315,7 @@ def remove_products(request, group_id):
         "message": _(u"Products have been removed.")
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def _udpate_positions(group_id):
@@ -322,3 +324,25 @@ def _udpate_positions(group_id):
     for i, gp in enumerate(GroupsPropertiesRelation.objects.filter(group=group_id)):
         gp.position = (i + 1) * 10
         gp.save()
+
+
+@permission_required("core.manage_shop")
+def sort_property_groups(request):
+    """Sort property groups
+    """
+    property_group_list = request.POST.get("serialized", "").split('&')
+    assert (isinstance(property_group_list, list))
+    if len(property_group_list) > 0:
+        pos = 10
+        for cat_str in property_group_list:
+            elem, pg_id = cat_str.split('=')
+            pg = PropertyGroup.objects.get(pk=pg_id)
+            pg.position = pos
+            pg.save()
+            pos += 10
+
+    result = simplejson.dumps({
+        "message": _(u"The Property groups have been sorted."),
+    }, cls=LazyEncoder)
+
+    return HttpResponse(result, mimetype='application/json')

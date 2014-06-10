@@ -1,15 +1,20 @@
 # django imports
+from copy import deepcopy
+from lfs.addresses import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
 from django.utils.translation import ugettext_lazy as _, check_for_language
-from django.conf import settings
+
 
 # lfs imports
 from lfs.core.models import Country
 from lfs.shipping.models import ShippingMethod
 from lfs.payment.models import PaymentMethod
+
+import logging
+logger = logging.getLogger('addresses')
 
 
 class Customer(models.Model):
@@ -37,15 +42,20 @@ class Customer(models.Model):
     sa_content_type = models.ForeignKey(ContentType, related_name="sa_content_type")
     sa_object_id = models.PositiveIntegerField()
     selected_shipping_address = generic.GenericForeignKey('sa_content_type', 'sa_object_id')
+    dsa_object_id = models.PositiveIntegerField()
+    default_shipping_address = generic.GenericForeignKey('sa_content_type', 'dsa_object_id')
 
     ia_content_type = models.ForeignKey(ContentType, related_name="ia_content_type")
     ia_object_id = models.PositiveIntegerField()
     selected_invoice_address = generic.GenericForeignKey('ia_content_type', 'ia_object_id')
 
+    dia_object_id = models.PositiveIntegerField()
+    default_invoice_address = generic.GenericForeignKey('ia_content_type', 'dia_object_id')
+
     selected_country = models.ForeignKey(Country, verbose_name=_(u"Selected country"), blank=True, null=True)
 
     def __unicode__(self):
-        return "%s/%s" % (self.user, self.session)
+        return u"%s/%s" % (self.user, self.session)
 
     def get_email_address(self):
         """Returns the email address of the customer dependend on the user is
@@ -76,6 +86,62 @@ class Customer(models.Model):
                self.selected_invoice_address or \
                None
 
+    def sync_default_to_selected_addresses(self, force=False):
+        # Synchronize selected addresses with default addresses
+        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        if force or not auto_update:
+            logger.debug('sync default to selected. Customer: %s' % (self.pk))
+            shipping_address = deepcopy(self.default_shipping_address)
+            if self.selected_shipping_address:
+                shipping_address.id = self.selected_shipping_address.id
+                shipping_address.pk = self.selected_shipping_address.pk
+                shipping_address.save()
+                logger.debug('sync default to selected. Copied shipping: %s' % (self.selected_shipping_address.pk))
+            else:
+                shipping_address.id = None
+                shipping_address.pk = None
+                shipping_address.save()
+                self.save()  # save customer to set generic key id
+                logger.debug('sync default to selected. New shipping: %s' % (shipping_address.pk))
+
+            invoice_address = deepcopy(self.default_invoice_address)
+            if self.selected_invoice_address:
+                invoice_address.id = self.selected_invoice_address.id
+                invoice_address.pk = self.selected_invoice_address.pk
+                invoice_address.save()
+                logger.debug('sync default to selected. Copied inv: %s' % (self.selected_invoice_address.pk))
+            else:
+                invoice_address.id = None
+                invoice_address.pk = None
+                invoice_address.save()
+                self.save()
+                logger.debug('sync default to selected. New inv: %s' % (invoice_address.pk))
+
+    def sync_selected_to_default_invoice_address(self, force=False):
+        # Synchronize default invoice address with selected address
+        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        if force or auto_update:
+            logger.debug('Sync selected to default invoice. Customer: %s, Invoice address pk: %s' % (self.pk, self.selected_invoice_address.pk))
+            address = deepcopy(self.selected_invoice_address)
+            address.id = self.default_invoice_address.id
+            address.pk = self.default_invoice_address.pk
+            address.save()
+
+    def sync_selected_to_default_shipping_address(self, force=False):
+        # Synchronize default shipping address with selected address
+        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        if force or auto_update:
+            logger.debug('Sync selected to default shipping. Customer: %s' % self.pk)
+            address = deepcopy(self.selected_shipping_address)
+            address.id = self.default_shipping_address.id
+            address.pk = self.default_shipping_address.pk
+            address.save()
+
+    def sync_selected_to_default_addresses(self, force=False):
+        # Synchronize default addresses with selected addresses
+        self.sync_selected_to_default_invoice_address(force)
+        self.sync_selected_to_default_shipping_address(force)
+
 
 class BankAccount(models.Model):
     """
@@ -102,7 +168,7 @@ class BankAccount(models.Model):
     depositor = models.CharField(_(u"Depositor"), blank=True, max_length=100)
 
     def __unicode__(self):
-        return "%s / %s" % (self.account_number, self.bank_name)
+        return u"%s / %s" % (self.account_number, self.bank_name)
 
 
 class CreditCard(models.Model):
@@ -135,21 +201,4 @@ class CreditCard(models.Model):
     expiration_date_year = models.IntegerField(_(u"Expiration date year"), blank=True, null=True)
 
     def __unicode__(self):
-        return "%s / %s" % (self.type, self.owner)
-
-
-class PreferredLanguage(models.Model):
-    user = models.OneToOneField(User, verbose_name=_(u"Customer"), blank=False, null=False,
-                                related_name="preferred_language")
-    language = models.CharField(_('Preferred language'), max_length=5, default=settings.LANGUAGE_CODE)
-
-    def __unicode__(self):
-        return self.get_preferred_language()
-
-    def get_preferred_language(self):
-        if check_for_language(self.language):
-            return self.language
-        else:
-            self.language = settings.LANGUAGE_CODE
-            self.save()
-            return settings.LANGUAGE_CODE
+        return u"%s / %s" % (self.type, self.owner)

@@ -16,10 +16,6 @@ from django.utils.functional import Promise
 from django.utils.encoding import force_unicode
 from django.shortcuts import render_to_response
 
-# lfs imports
-from lfs.core.models import Shop
-from lfs.catalog.models import Category
-
 
 def l10n_float(string):
     """Takes a country specfic decimal value as string and returns a float.
@@ -39,6 +35,15 @@ def atof(value):
     """
     locale.atof() on unicode string fails in some environments, like Czech.
     """
+    val = str(value)
+    try:
+        return float(val)
+    except ValueError:
+        try:
+            return float(val.replace(',', '.'))
+        except ValueError:
+            pass
+
     if isinstance(value, unicode):
         value = value.encode("utf-8")
     return locale.atof(value)
@@ -47,6 +52,7 @@ def atof(value):
 def get_default_shop(request=None):
     """Returns the default shop.
     """
+    from lfs.core.models import Shop
     if request:
         try:
             return request.shop
@@ -150,7 +156,7 @@ def render_to_ajax_response(html=[], message=None):
     result = simplejson.dumps(
         {"message": message, "html": html}, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def get_current_categories(request, object):
@@ -213,6 +219,7 @@ def remove_redirect_for(path):
 def set_category_levels():
     """Sets the category levels based on the position in hierarchy.
     """
+    from lfs.catalog.models import Category
     for category in Category.objects.all():
         category.level = len(category.get_parents()) + 1
         category.save()
@@ -222,8 +229,11 @@ def get_start_day(date):
     """Takes a string such as ``2009-07-23`` and returns datetime object of
     this day.
     """
-    year, month, day = date.split("-")
-    start = datetime.datetime(int(year), int(month), int(day))
+    try:
+        year, month, day = date.split("-")
+        start = datetime.datetime(int(year), int(month), int(day))
+    except ValueError:
+        return None
     return start
 
 
@@ -231,7 +241,10 @@ def get_end_day(date):
     """Takes a string such as ``2009-07-23`` and returns a datetime object with
     last valid second of this day: 23:59:59.
     """
-    year, month, day = date.split("-")
+    try:
+        year, month, day = date.split("-")
+    except ValueError:
+        return None
     end = datetime.datetime(int(year), int(month), int(day))
     end = end + datetime.timedelta(1) - datetime.timedelta(microseconds=1)
 
@@ -276,6 +289,7 @@ class CategoryTree(object):
     def get_category_tree(self):
         """Returns a category tree
         """
+        from lfs.catalog.models import Category
         # NOTE: We don't use the level attribute of the category but calculate
         # actual position of a category based on the current tree. In this way
         # the category tree always start with level 1 (even if we start with
@@ -287,7 +301,7 @@ class CategoryTree(object):
             if category.exclude_from_navigation:
                 continue
 
-            if (self.currents and category in self.currents):
+            if self.currents and category in self.currents:
                 children = self._get_sub_tree(category, level + 1)
                 is_current = True
             elif category.level <= self.expand_level:
@@ -316,13 +330,14 @@ class CategoryTree(object):
         return categories
 
     def _get_sub_tree(self, category, level):
+        from lfs.catalog.models import Category
         categories = []
         for category in Category.objects.filter(parent=category):
 
             if category.exclude_from_navigation:
                 continue
 
-            if (self.currents and category in self.currents):
+            if self.currents and category in self.currents:
                 children = self._get_sub_tree(category, level + 1)
                 is_current = True
             elif category.level <= self.expand_level:

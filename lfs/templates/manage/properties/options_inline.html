@@ -2,7 +2,7 @@
 
 <h2 class="heading-middle">{% trans 'Select field options' %}</h2>
 <form id="shop-property-options-form"
-      action="{% url lfs_add_shop_property_option property.id %}"
+      action="{% url 'lfs_add_shop_property_option' property.id %}"
       method="post">
     {{ form.non_field_errors }}
     <table>
@@ -18,7 +18,7 @@
             </th>
             <th></th>
         </tr>
-        <tr class="add-row">
+        <tr>
             <td>
                 {{ form.position.errors }}
                 {{ form.position }}
@@ -70,7 +70,7 @@
                 <td>
                     <a class="delete-link"
                        dialog_message="{% trans 'Do you really want to delete this option?' %}"
-                       href="{% url lfs_delete_shop_property_option form.instance.id %}">
+                       href="{% url 'lfs_delete_shop_property_option' option.id %}">
                         <img src="{{ STATIC_URL }}icons/cross.png"
                              alt="{% trans 'Delete' %}"
                              title="{% trans 'Delete option' %}" />

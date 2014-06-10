@@ -1,7 +1,7 @@
 {% load i18n %}
 {% load lfs_manage_tags %}
 
-<form action="{% url lfs_set_product_filters %}"
+<form action="{% url 'lfs_set_product_filters' %}"
       method="POST">{% csrf_token %}
 
     <input type="hidden"
@@ -13,6 +13,7 @@
             <td class="discreet">{% trans "Amount" %}</td>
             <td class="discreet">{% trans "Name/SKU" %}</td>
             <td class="discreet">{% trans "Category" %}</td>
+            <td class="discreet">{% trans "Manufacturer" %}</td>
             <td class="discreet">{% trans "Active" %}</td>
             <td class="discreet">{% trans "For sale" %}</td>
             <td class="discreet">{% trans "Sub type" %}</td>
@@ -22,10 +23,10 @@
                 <select id="amount"
                         name="amount">
                     {% for option in amount_options %}
-                        <option {% if option.selected %}selected="selected"{% endif %} 
+                        <option {% if option.selected %}selected="selected"{% endif %}
                                 value="{{ option.value }}">{{ option.value }}</option>
                     {% endfor %}
-                </select>                    
+                </select>
             </td>
             <td>
                 <input type="text"
@@ -35,6 +36,9 @@
             </td>
             <td>
                 {% category_filter "products-category-filter" %}
+            </td>
+            <td>
+                {% manufacturer_filter "products-manufacturer-filter" %}
             </td>
             <td>
                 <select name="active">
@@ -61,8 +65,8 @@
             </td>
             <td>
                 <input type="submit"
-                       class="ajax-save-button" value="{% trans "Fiter products" %}" />
-                <a href="{% url lfs_reset_product_filters %}?product-id={{ product_id }}"
+                       class="ajax-save-button" value="{% trans "Filter products" %}" />
+                <a href="{% url 'lfs_reset_product_filters' %}?product-id={{ product_id }}"
                    class="ajax-link reset">&nbsp;</a>
             </td>
             <td>

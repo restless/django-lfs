@@ -62,8 +62,14 @@ class LatestPortlet(Portlet):
     def form(self, **kwargs):
         """
         """
-        from lfs.portlet.forms import LatestForm
         return LatestForm(instance=self, **kwargs)
 
     def __unicode__(self):
-        return "%s" % self.id
+        return u"%s" % self.id
+
+
+class LatestForm(forms.ModelForm):
+    """
+    """
+    class Meta:
+        model = LatestPortlet

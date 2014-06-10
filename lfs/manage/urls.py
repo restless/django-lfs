@@ -129,7 +129,7 @@ urlpatterns += patterns('lfs.manage.product.images',
     url(r'^update-images/(?P<product_id>\d*)$', "update_images", name="lfs_manage_update_images"),
     url(r'^product-images/(?P<product_id>\d*)$', "manage_images", name="lfs_manage_images"),
     url(r'^update-active-images/(?P<product_id>\d*)$', "update_active_images", name="lfs_manage_update_active_images"),
-    url(r'^move-image/(?P<id>\d+)$', "move_image", name="lfc_move_image"),
+    url(r'^move-image/(?P<id>\d+)$', "move_image", name="lfs_move_image"),
 )
 
 # Product Attachments
@@ -174,6 +174,7 @@ urlpatterns += patterns('lfs.manage.property_groups.views',
     url(r'^assign-properties/(?P<group_id>\d*)', "assign_properties", name="lfs_assign_properties"),
     url(r'^update-properties/(?P<group_id>\d*)', "update_properties", name="lfs_update_properties"),
     url(r'^no-property-groups$', "no_property_groups", name="lfs_manage_no_property_groups"),
+    url(r'^sort-property-groups$', "sort_property_groups", name="lfs_manage_sort_property_groups"),
 )
 
 # Property Groups / Products
@@ -199,6 +200,8 @@ urlpatterns += patterns('lfs.manage.property.views',
     url(r'^save-number-field-validators/(?P<property_id>\d*)', "save_number_field_validators", name="lfs_save_number_field_validators"),
     url(r'^save-select-field/(?P<property_id>\d*)', "save_select_field", name="lfs_save_select_field"),
     url(r'^no-properties$', "no_properties", name="lfs_manage_no_shop_properties"),
+    url(r'^set-property-name-filter$', "set_name_filter", name="lfs_set_property_name_filter"),
+    url(r'^set-property-page$', "set_properties_page", name="lfs_set_properties_page"),
 )
 
 # Product properties
@@ -315,6 +318,14 @@ urlpatterns += patterns('lfs.manage.discounts.views',
     url(r'^delete-discount/(?P<id>\d*)$', "delete_discount", name="lfs_manage_delete_discount"),
     url(r'^save-discount-criteria/(?P<id>\d*)$', "save_discount_criteria", name="lfs_manage_save_discount_criteria"),
     url(r'^no-discounts$', "no_discounts", name="lfs_manage_no_discounts"),
+)
+
+
+# Discounts / Products
+urlpatterns += patterns('lfs.manage.discounts.views',
+    url(r'^assign-products-to-discount/(?P<discount_id>\d*)', "assign_products", name="lfs_assign_products_to_discount"),
+    url(r'^remove-products-from-discount/(?P<discount_id>\d*)', "remove_products", name="lfs_discount_remove_products"),
+    url(r'^discount-products-inline/(?P<discount_id>\d*)', "products_inline", name="lfs_discount_products_inline"),
 )
 
 # Pages

@@ -17,15 +17,13 @@ from django.utils.translation import ugettext_lazy as _
 import lfs.catalog.utils
 import lfs.core.utils
 import lfs.core.views
-from lfs.order.settings import SUBMITTED, PAYMENT_FLAGGED, PAYMENT_FAILED
 import lfs.utils.misc
 import logging
-from lfs.caching.utils import lfs_get_object_or_404, get_cache_group_id
+
+from lfs.caching.utils import get_cache_group_id
 from lfs.catalog.models import Category
-from lfs.catalog.settings import CONFIGURABLE_PRODUCT, VARIANT
+from lfs.catalog.settings import VARIANT
 from lfs.catalog.settings import CATEGORY_VARIANT_CHEAPEST_PRICES
-from lfs.catalog.settings import PRODUCT_WITH_VARIANTS
-from lfs.catalog.settings import STANDARD_PRODUCT
 from lfs.catalog.settings import SORTING_MAP
 from lfs.catalog.models import Product
 from lfs.catalog.models import PropertyOption
@@ -126,7 +124,6 @@ def breadcrumbs(context, obj, current_page=''):
         objects = cache.get(cache_key)
         if objects is not None:
             return objects
-
         objects = [current_page] if current_page else []
         while obj is not None:
             objects.insert(0, {
@@ -140,38 +137,25 @@ def breadcrumbs(context, obj, current_page=''):
             "STATIC_URL": context.get("STATIC_URL"),
         }
         cache.set(cache_key, result)
-
     elif isinstance(obj, Product):
-        try:
-            if obj.is_variant():
-                parent_product = obj.parent
-            else:
-                parent_product = obj
-        except ObjectDoesNotExist:
-            return []
+        request = context.get("request")
+        objects = [{
+            "name": obj.get_name(),
+            "url": obj.get_absolute_url(),
+        }]
+        # product page may be visited from manufacturer or category
+        lm = request.session.get('last_manufacturer')
+        if lm and obj.manufacturer == lm:
+            objects.insert(0, {
+                "name": lm.name,
+                "url": lm.get_absolute_url(),
+            })
+            objects.insert(0, {
+                "name": _(u"Manufacturers"),
+                "url": reverse("lfs_manufacturers")})
         else:
-            request = context.get("request")
-            # product page may be visited from manufacturer or category
-            lm = request.session.get('last_manufacturer')
-
-            objects = [{
-                        "name": obj.get_name(),
-                        "url": obj.get_absolute_url(),
-                    }]
-
-            if lm and obj.manufacturer == lm:
-                objects.insert(0, {
-                        "name": lm.name,
-                        "url": lm.get_absolute_url(),
-                    })
-                objects.insert(0, {
-                            "name": _(u"Manufacturers"),
-                            "url": reverse("lfs_manufacturers")})
-            else:
-                category = obj.get_current_category(request)
-                if category is None:
-                    return []
-
+            category = obj.get_current_category(request)
+            if category:
                 while category is not None:
                     objects.insert(0, {
                         "name": category.name,
@@ -183,7 +167,6 @@ def breadcrumbs(context, obj, current_page=''):
             "objects": objects,
             "STATIC_URL": context.get("STATIC_URL"),
         }
-
     elif isinstance(obj, Page):
         objects = []
         objects.append({
@@ -220,9 +203,9 @@ def product_navigation(context, product):
     """Provides previous and next product links.
     """
     request = context.get("request")
-    sorting = request.session.get("sorting", 'price')
+    sorting = request.session.get("sorting", 'effective_price')
     if sorting.strip() == '':
-        sorting = 'price'
+        sorting = 'effective_price'
         request.session["sorting"] = sorting
 
     # To calculate the position we take only STANDARD_PRODUCT into account.
@@ -242,7 +225,7 @@ def product_navigation(context, product):
     if lm and product.manufacturer == lm:
         cache_key = "%s-%s-product-navigation-manufacturer-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                                   pn_cache_key,
-                                                                  product.pk)
+                                                                  slug)
         res = cache.get(cache_key)
         if res and sorting in res:
             return res[sorting]
@@ -255,7 +238,7 @@ def product_navigation(context, product):
         else:
             cache_key = "%s-%s-product-navigation-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                          pn_cache_key,
-                                                         product.pk)
+                                                         slug)
             res = cache.get(cache_key)
             if res and sorting in res:
                 return res[sorting]
@@ -285,14 +268,14 @@ def product_navigation(context, product):
 
     total = len(product_ids)
     if product_index < total - 1:
-        next = Product.objects.get(pk=product_ids[product_index + 1])
+        next_product = Product.objects.get(pk=product_ids[product_index + 1])
     else:
-        next = None
+        next_product = None
 
     result = {
         "display": True,
         "previous": previous,
-        "next": next,
+        "next": next_product,
         "current": product_index + 1,
         "total": total,
         "STATIC_URL": context.get("STATIC_URL"),
@@ -538,7 +521,7 @@ def get_slug_from_request(request):
 
 
 @register.filter
-def currency(value, request=None, grouping=True):
+def currency_text(value, request=None, grouping=True):
     """
     Returns the currency based on the given locale within settings.LFS_LOCALE
 
@@ -547,7 +530,7 @@ def currency(value, request=None, grouping=True):
     import locale
     locale.setlocale(locale.LC_ALL, 'de_CH.UTF-8')
     currency(123456.789)  # Fr. 123'456.79
-    currency(-123456.789) # <span class="negative">Fr. -123'456.79</span>
+    currency(-123456.789) # Fr. -123'456.79
     """
     if locale.getlocale(locale.LC_ALL)[0] is None:
         lfs.core.views.one_time_setup()
@@ -562,14 +545,52 @@ def currency(value, request=None, grouping=True):
         result = value
         logger.error("currency filter: %s" % e)
 
-    # add css class if value is negative
     if value < 0:
         # replace the minus symbol if needed
         if result[-1] == '-':
             length = len(locale.nl_langinfo(locale.CRNCYSTR))
             result = '%s-%s' % (result[0:length], result[length:-1])
-        return mark_safe('<span class="negative">%s</span>' % result)
     return result
+
+
+@register.filter
+def currency(value, request=None, grouping=True):
+    """
+    Returns the currency based on the given locale within settings.LFS_LOCALE
+
+    e.g.
+
+    import locale
+    locale.setlocale(locale.LC_ALL, 'de_CH.UTF-8')
+    currency(123456.789)  # <span class="money">Fr. 123'456.79</span>
+    currency(-123456.789) # <span class="money negative">Fr. -123'456.79</span>
+    """
+    if locale.getlocale(locale.LC_ALL)[0] is None:
+        lfs.core.views.one_time_setup()
+
+    if not value:
+        value = 0.0
+
+    shop = lfs.core.utils.get_default_shop(request)
+    try:
+        result = locale.currency(value, grouping=grouping, international=shop.use_international_currency_code)
+    except ValueError, e:
+        result = str(value)
+        logger.error("currency filter: %s" % e)
+
+    # add css class if value is negative
+    negative = False
+    if value < 0:
+        negative = True
+        # replace the minus symbol if needed
+        if result[-1] == '-':
+            length = len(locale.nl_langinfo(locale.CRNCYSTR))
+            result = '%s-%s' % (result[0:length], result[length:-1])
+
+    return mark_safe('<span class="money%(negative)s">%(result)s</span>' % {
+        'result': result.strip(),
+        'negative': ' negative' if negative else '',
+    })
 
 
 @register.filter
@@ -912,7 +933,7 @@ def lfs_form(context, form):
     if isinstance(form, BoundField):
         form = [form]
     context['lfs_form'] = form
-    context['lfs_form_is_form'] = hasattr(form,'non_field_errors')
+    context['lfs_form_is_form'] = hasattr(form, 'non_field_errors')
     return context
 
 

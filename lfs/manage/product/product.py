@@ -230,7 +230,7 @@ class ProductStockForm(forms.ModelForm):
         if kwargs.get("instance").is_variant():
             self.fields["active_packing_unit"].widget = Select(choices=CHOICES)
         else:
-            self.fields["active_packing_unit"].widget = CheckboxInput(check_test=lambda v:v!=0)
+            self.fields["active_packing_unit"].widget = CheckboxInput(check_test=lambda v: v != 0)
 
     def clean(self):
         if self.data.get("stock-active_packing_unit") == str(CHOICES_YES):
@@ -319,7 +319,7 @@ def stock(request, product_id, template_name="manage/product/stock.html"):
             "html": html,
             "message": message,
         }, cls=LazyEncoder)
-        return HttpResponse(result)
+        return HttpResponse(result, mimetype='application/json')
     else:
         return result
 
@@ -506,9 +506,13 @@ def delete_product(request, product_id):
     """Deletes product with passed id.
     """
     product = lfs_get_object_or_404(Product, pk=product_id)
+    url = reverse('lfs_manage_product_dispatcher')
+    if product.is_variant():
+        url = reverse("lfs_manage_product", kwargs={"product_id": product.parent_id})
+    else:
+        url = reverse("lfs_manage_product_dispatcher")
     product.delete()
 
-    url = reverse("lfs_manage_product_dispatcher")
     return HttpResponseRedirect(url)
 
 
@@ -562,7 +566,7 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
         "message": message,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -603,7 +607,7 @@ def reset_filters(request):
     msg = _(u"Product filters have been reset")
     result = simplejson.dumps(
         {"html": html, "message": msg, }, cls=LazyEncoder)
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -683,7 +687,7 @@ def save_products(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -717,7 +721,7 @@ def set_name_filter(request):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -726,7 +730,7 @@ def set_filters(request):
     Sets product filters given by passed request.
     """
     product_filters = request.session.get("product_filters", {})
-    for name in ("name", "active", "price", "category", "for_sale", "sub_type", "amount"):
+    for name in ("name", "active", "price", "category", "manufacturer", "for_sale", "sub_type", "amount"):
         if request.POST.get(name, "") != "":
             product_filters[name] = request.POST.get(name)
         else:
@@ -759,7 +763,7 @@ def set_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -788,7 +792,7 @@ def set_products_page(request):
     )
 
     return HttpResponse(
-        simplejson.dumps({"html": html}, cls=LazyEncoder))
+        simplejson.dumps({"html": html}, cls=LazyEncoder), mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -808,7 +812,7 @@ def _get_filtered_products_for_product_view(request):
     and ordering within the current session.
     """
     products = Product.objects.all()
-    product_ordering = request.session.get("product-ordering", "id")
+    product_ordering = request.session.get("product-ordering", "name")
     product_ordering_order = request.session.get("product-ordering-order", "")
 
     # Filter
@@ -864,6 +868,15 @@ def _get_filtered_products(request):
         categories = [category]
         categories.extend(category.get_all_children())
         products = products.filter(categories__in=categories).distinct()
+
+    # manufacturer
+    manufacturer = product_filters.get("manufacturer", "")
+    if manufacturer == "None":
+        products = products.filter(manufacturer=None)
+    elif manufacturer == "All":
+        products = products.distinct()
+    elif manufacturer != "":
+        products = products.filter(manufacturer=manufacturer).distinct()
 
     products = products.order_by("%s%s" % (product_ordering_order, product_ordering))
 

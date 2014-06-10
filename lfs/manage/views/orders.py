@@ -3,6 +3,8 @@ from datetime import datetime
 from datetime import timedelta
 
 # django imports
+from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import EmptyPage
@@ -145,6 +147,7 @@ def order_filters_inline(request, order_id, template_name="manage/order/order_fi
         "end": order_filters.get("end", ""),
         "name": order_filters.get("name", ""),
         "states": states,
+        "state_id": state_id
     }))
 
 
@@ -170,6 +173,7 @@ def orders_filters_inline(request, template_name="manage/order/orders_filters_in
     result = render_to_string(template_name, RequestContext(request, {
         "paginator": paginator,
         "page": page,
+        "state_id": state_id,
         "states": states,
         "start": order_filters.get("start", ""),
         "end": order_filters.get("end", ""),
@@ -242,9 +246,11 @@ def set_order_filters(request):
         html = (
             ("#selectable-orders", selectable_orders_inline(request, order_id)),
             ("#order-inline", order_inline(request, order_id=order_id)),
+            ("#orders-filters-inline", orders_filters_inline(request)),
         )
     else:
-        html = (("#orders-inline", orders_inline(request)),)
+        html = (("#orders-inline", orders_inline(request)),
+                ("#orders-filters-inline", orders_filters_inline(request)),)
 
     msg = _(u"Filters has been set")
 
@@ -253,7 +259,7 @@ def set_order_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -289,7 +295,7 @@ def set_order_filters_date(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -319,7 +325,7 @@ def reset_order_filters(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -335,7 +341,7 @@ def set_selectable_orders_page(request):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -353,7 +359,7 @@ def set_orders_page(request):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -395,6 +401,8 @@ def change_order_state(request):
     state_id = request.POST.get("new-state")
     order = get_object_or_404(Order, pk=order_id)
 
+    old_state = order.state
+
     try:
         order.state = int(state_id)
     except ValueError:
@@ -408,6 +416,11 @@ def change_order_state(request):
     if order.state == lfs.order.settings.PAID:
         lfs.core.signals.order_paid.send({"order": order, "request": request})
 
+    lfs.core.signals.order_state_changed.send(sender=order, order=order, request=request, old_state=old_state)
+
+    cache_key = "%s-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, Order.__name__.lower(), order.pk)
+    cache.delete(cache_key)
+
     msg = _(u"State has been changed")
 
     html = (
@@ -420,7 +433,7 @@ def change_order_state(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def _get_filtered_orders(order_filters):
@@ -442,16 +455,20 @@ def _get_filtered_orders(order_filters):
 
     # start
     start = order_filters.get("start", "")
+    s = start
     if start != "":
         s = lfs.core.utils.get_start_day(start)
-    else:
+
+    if not s:
         s = datetime.min
 
     # end
     end = order_filters.get("end", "")
+    e = end
     if end != "":
         e = lfs.core.utils.get_end_day(end)
-    else:
+
+    if not e:
         e = datetime.max
 
     orders = orders.filter(created__range=(s, e))

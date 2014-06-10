@@ -9,11 +9,12 @@ from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 
 # lfs imports
+from lfs.caching import update_product_cache
 from lfs.catalog.models import Product
 from lfs.catalog.models import ProductPropertyValue, PropertyOption
 from lfs.catalog.models import Property
 from lfs.catalog.models import PropertyGroup
-from lfs.catalog.settings import PROPERTY_NUMBER_FIELD
+from lfs.catalog.settings import PROPERTY_NUMBER_FIELD, PROPERTY_VALUE_TYPE_VARIANT
 from lfs.catalog.settings import PROPERTY_TEXT_FIELD
 from lfs.catalog.settings import PROPERTY_SELECT_FIELD
 from lfs.catalog.settings import PROPERTY_VALUE_TYPE_DEFAULT
@@ -37,7 +38,7 @@ def manage_properties(request, product_id, template_name="manage/product/propert
     configurables = []
     filterables = []
     displayables = []
-    parent_local_properties = []
+    product_variant_properties = []
 
     langs = get_languages_list()
 
@@ -46,12 +47,12 @@ def manage_properties(request, product_id, template_name="manage/product/propert
         for property_group in product.property_groups.all():
             properties = []
             for prop in property_group.properties.filter(configurable=True).order_by("groupspropertiesrelation"):
-
                 display_configurables = True
                 ppv_values = {}
 
                 try:
-                    ppv = ProductPropertyValue.objects.get(property=prop, product=product, type=PROPERTY_VALUE_TYPE_DEFAULT)
+                    ppv = ProductPropertyValue.objects.get(property=prop, product=product,
+                                                           type=PROPERTY_VALUE_TYPE_DEFAULT)
                 except ProductPropertyValue.DoesNotExist:
                     ppv_id = None
                     ppv_value = ""
@@ -93,11 +94,12 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 out_dict.update(ppv_values)
                 properties.append(out_dict)
 
-            configurables.append({
-                "id": property_group.id,
-                "name": property_group.name,
-                "properties": properties,
-            })
+            if properties:
+                configurables.append({
+                    "id": property_group.id,
+                    "name": property_group.name,
+                    "properties": properties,
+                })
 
         # Filterable
         for property_group in product.property_groups.all():
@@ -108,7 +110,8 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product, type=PROPERTY_VALUE_TYPE_FILTER)
+                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product,
+                                                           type=PROPERTY_VALUE_TYPE_FILTER)
                 value_ids = [ppv.value for ppv in ppvs]
 
                 # Mark selected options
@@ -149,6 +152,7 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     "type": prop.type,
                     "options": options,
                     "value": value,
+                    "display_on_product": prop.display_on_product,
                     "display_number_field": prop.type == PROPERTY_NUMBER_FIELD,
                     "display_text_field": prop.type == PROPERTY_TEXT_FIELD,
                     "display_select_field": display_select_field,
@@ -156,11 +160,12 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 out_dict.update(ppv_values)
                 properties.append(out_dict)
 
-            filterables.append({
-                "id": property_group.id,
-                "name": property_group.name,
-                "properties": properties,
-            })
+            if properties:
+                filterables.append({
+                    "id": property_group.id,
+                    "name": property_group.name,
+                    "properties": properties,
+                })
 
         # Displayable
         for property_group in product.property_groups.all():
@@ -171,7 +176,8 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product, type=PROPERTY_VALUE_TYPE_DISPLAY)
+                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product,
+                                                           type=PROPERTY_VALUE_TYPE_DISPLAY)
                 value_ids = [ppv.value for ppv in ppvs]
 
                 # Mark selected options
@@ -213,6 +219,7 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                     "type": prop.type,
                     "options": options,
                     "value": value,
+                    "filterable": prop.filterable,
                     "display_number_field": prop.type == PROPERTY_NUMBER_FIELD,
                     "display_text_field": prop.type == PROPERTY_TEXT_FIELD,
                     "display_select_field": display_select_field,
@@ -220,23 +227,21 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 out_dict.update(ppv_values)
                 properties.append(out_dict)
 
-            displayables.append({
-                "id": property_group.id,
-                "name": property_group.name,
-                "properties": properties,
-            })
+            if properties:
+                displayables.append({
+                    "id": property_group.id,
+                    "name": property_group.name,
+                    "properties": properties,
+                })
 
     if product.is_variant():
-        local_properties = product.parent.get_local_properties()
-        for prop in local_properties:
-            # local properties can be defined only for variant products and they have type of PROPERTY_SELECT_FIELD
-            if prop.type == PROPERTY_SELECT_FIELD:
-                try:
-                    prop_val = product.property_values.get(property=prop)
-                    property_option = PropertyOption.objects.get(property=prop, pk=prop_val.value)
-                    parent_local_properties.append(property_option)
-                except (ProductPropertyValue.DoesNotExist, PropertyOption.DoesNotExist):
-                    continue
+        qs = ProductPropertyValue.objects.filter(product=product, type=PROPERTY_VALUE_TYPE_VARIANT)
+        for ppv in qs:
+            try:
+                property_option = PropertyOption.objects.get(property_id=ppv.property_id, pk=ppv.value)
+                product_variant_properties.append(property_option)
+            except (ProductPropertyValue.DoesNotExist, PropertyOption.DoesNotExist):
+                continue
 
     # Generate list of all property groups; used for group selection
     product_property_group_ids = [p.id for p in product.property_groups.all()]
@@ -259,7 +264,7 @@ def manage_properties(request, product_id, template_name="manage/product/propert
         "display_displayables": display_displayables,
         "product_property_groups": product.property_groups.all(),
         "shop_property_groups": shop_property_groups,
-        "parent_local_properties": parent_local_properties
+        "product_variant_properties": product_variant_properties
     }))
 
 
@@ -269,6 +274,7 @@ def update_property_groups(request, product_id):
     """Updates property groups for the product with passed id.
     """
     selected_group_ids = request.POST.getlist("selected-property-groups")
+    product = Product.objects.get(pk=product_id)
 
     for property_group in PropertyGroup.objects.all():
         # if the group is within selected groups we try to add it to the product
@@ -280,8 +286,9 @@ def update_property_groups(request, product_id):
                 property_group.products.add(product_id)
         else:
             property_group.products.remove(product_id)
-            product = Product.objects.get(pk=product_id)
             product_removed_property_group.send([property_group, product])
+
+    update_product_cache(product)
 
     url = reverse("lfs_manage_product", kwargs={"product_id": product_id})
     return HttpResponseRedirect(url)
@@ -292,8 +299,9 @@ def update_property_groups(request, product_id):
 def update_properties(request, product_id):
     """Updates properties for product with passed id.
     """
-    value_type = request.POST.get("type")
-    ProductPropertyValue.objects.filter(product=product_id, type=value_type).delete()
+    ppv_type = int(request.POST.get("type"))
+    product = get_object_or_404(Product, pk=product_id)
+    ProductPropertyValue.objects.filter(product=product_id, type=ppv_type).delete()
 
     langs = get_languages_list()
     default_lang = langs[0]
@@ -332,7 +340,7 @@ def update_properties(request, product_id):
                     values_dict[build_localized_fieldname('value', lang)] = value
             else:
                 # only create PPV if all values were valid
-                ProductPropertyValue.objects.create(**values_dict)
+                ProductPropertyValue.objects.get_or_create(**values_dict)
         else:
             for value in request.POST.getlist(key):
                 if prop.is_valid_value(value):
@@ -340,7 +348,8 @@ def update_properties(request, product_id):
                     # for select field option we have only one value, so we're saving it to all translated fields
                     for lang in langs:
                         values_dict[build_localized_fieldname('value', lang)] = value
-                    ProductPropertyValue.objects.create(**values_dict)
-
+                    ProductPropertyValue.objects.get_or_create(**values_dict)
+    
+    update_product_cache(product)
     url = reverse("lfs_manage_product", kwargs={"product_id": product_id})
     return HttpResponseRedirect(url)

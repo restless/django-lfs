@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import EmptyPage
 from django.db import IntegrityError
-from django.forms import ModelForm, ValidationError
+from django.forms import ModelForm, ValidationError, ChoiceField
 from django.forms.widgets import Select
 from django.http import HttpResponse
 from django.template import RequestContext
@@ -111,57 +111,73 @@ class PropertyForm(ModelForm):
 
 
 class ProductVariantSimpleForm(ModelForm):
-    """Form to add/edit variants options.
+    """ Variants add form.
+    """
+    def __init__(self, all_properties, *args, **kwargs):
+        super(ProductVariantSimpleForm, self).__init__(*args, **kwargs)
+        self.fields['slug'].required = False
+        prepare_fields_order(self, fields=("slug", "name", "price"))
+        for prop in all_properties:
+            choices = [('all', _('All')), ('', '---')]
+            choices.extend(list(prop.options.values_list('pk', 'name')))
+            self.fields['property_%s' % prop.id] = ChoiceField(label=prop.name, choices=choices, required=False)
+            self.initial['property_%s' % prop.id] = 'all'
+
+    class Meta:
+        model = Product
+
+
+class ProductVariantCreateForm(ModelForm):
+    """ Form used to create product variant for specific set of options
     """
     def __init__(self, options=None, product=None, *args, **kwargs):
-        super(ProductVariantSimpleForm, self).__init__(*args, **kwargs)
+        super(ProductVariantCreateForm, self).__init__(*args, **kwargs)
+        self.fields['slug'].required = False
         prepare_fields_order(self, fields=("slug", "name", "price"))
         self.options = options
         self.product = product
 
+    def prepare_slug(self, slug, trans_slug, trans_name, lang):
+        for option in self.options:
+            property_id, option_id = option.split("|")
+            o = PropertyOption.objects.get(pk=option_id)
+            if slug:
+                slug += "-"
+            slug += slugify(getattr(o, trans_name, ''))
+
+        product_slug = getattr(self.product, trans_slug, '')
+        if product_slug is None:
+            product_slug = ''
+        if product_slug + trans_slug.replace('-', '') == '':
+            slug = ''
+        else:
+            slug = "%s-%s" % (product_slug, trans_slug)
+            slug = slug.rstrip('-')
+
+        # create unique slug
+        slug = slug[:80]
+        new_slug = slug
+        counter = 1
+        while Product.objects.filter(**{trans_slug: new_slug}).exists():
+            new_slug = '%s-%s' % (slug[:(79 - len(str(counter)))], counter)
+            counter += 1
+        slug = new_slug
+        return slug        
+
     def clean(self):
-        cleaned_data = self.cleaned_data
+        cleaned_data = super(ProductVariantCreateForm, self).clean()
         for lang in get_languages_list():
             trans_slug = build_localized_fieldname("slug", lang)
             trans_name = build_localized_fieldname("name", lang)
-            slug = cleaned_data.get(trans_slug)
-
-            for option in self.options:
-                property_id, option_id = option.split("|")
-                o = PropertyOption.objects.get(pk=option_id)
-                if slug:
-                    slug += "-"
-                slug += slugify(getattr(o, trans_name, ''))
-
-            product_slug = getattr(self.product, trans_slug, '')
-            if product_slug is None:
-                product_slug = ''
-            if product_slug + slug.replace('-', '') == '':
-                slug = ''
-            else:
-                slug = "%s-%s" % (product_slug, slug)
-
-            message = ''
-
-            # # need to validate the amalgamated slug to make sure it is not already in use
-            # try:
-            #     variant = Product.objects.get(**{trans_slug: slug})
-            #     message = _(u"That slug is already in use. Please use another.")
-            # except Product.MultipleObjectsReturned:
-            #     message = _(u"That slug is already in use. Please use another.")
-            # except Product.DoesNotExist:
-            #     cleaned_data[trans_slug] = slug
+            slug = cleaned_data.get(trans_slug, '')
+            slug = self.prepare_slug(slug, trans_slug, trans_name, lang)
             cleaned_data[trans_slug] = slug
-
-            if message:
-                self._errors[trans_slug] = self.error_class([message])
-                del cleaned_data[trans_slug]
 
         return cleaned_data
 
     class Meta:
         model = Product
-
+        
 
 class CategoryVariantForm(ModelForm):
     """
@@ -182,6 +198,7 @@ class CategoryVariantForm(ModelForm):
     class Meta:
         model = Product
         fields = ("category_variant", )
+
 
 class DisplayTypeForm(ModelForm):
     """Form to add/edit product's sub types.
@@ -209,22 +226,24 @@ class DefaultVariantForm(ModelForm):
 
 
 @permission_required("core.manage_shop")
-def manage_variants(request, product_id, as_string=False, property_form=None, current_property_option_form=None,
-                    variant_simple_form=None, template_name="manage/product/variants.html"):
+def manage_variants(request, product_id, as_string=False, variant_simple_form=None, template_name="manage/product/variants.html"):
     """Manages the variants of a product.
     """
     product = Product.objects.get(pk=product_id)
-    if not property_form:
-        property_form = PropertyForm()
+
+    all_properties = product.get_property_select_fields()
+
+    property_form = PropertyForm()
     property_option_form = PropertyOptionForm()
     if not variant_simple_form:
-        variant_simple_form = ProductVariantSimpleForm()
+        variant_simple_form = ProductVariantSimpleForm(all_properties=all_properties)
     display_type_form = DisplayTypeForm(instance=product)
     default_variant_form = DefaultVariantForm(instance=product)
     category_variant_form = CategoryVariantForm(instance=product)
 
     pid = product.get_parent().pk
-    group_id = get_cache_group_id('properties-%s' % pid)
+    properties_version = get_cache_group_id('global-properties-version')
+    group_id = '%s-%s' % (properties_version, get_cache_group_id('properties-%s' % pid))
     cache_key = "%s-manage-properties-variants-%s-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, group_id, product_id)
     variants = cache.get(cache_key)
 
@@ -247,8 +266,8 @@ def manage_variants(request, product_id, as_string=False, property_form=None, cu
 
         product_variants = product.variants.all().order_by("variant_position")
         selected_options = {}
-        for so in ProductPropertyValue.objects.filter(property__in=props, \
-                        product__in=product_variants, type=PROPERTY_VALUE_TYPE_VARIANT):
+        for so in ProductPropertyValue.objects.filter(property__in=props,
+                                                      product__in=product_variants, type=PROPERTY_VALUE_TYPE_VARIANT):
             ppk = so.product_id
             selected_options.setdefault(ppk, {})[so.property_id] = so.value
 
@@ -307,9 +326,8 @@ def manage_variants(request, product_id, as_string=False, property_form=None, cu
         "variants": variants,
         "shop_property_groups": shop_property_groups,
         "local_properties": product.get_local_properties(),
-        "all_properties": product.get_property_select_fields(),
+        "all_properties": all_properties,
         "property_option_form": property_option_form,
-        "current_property_option_form": current_property_option_form,
         "property_form": property_form,
         "variant_simple_form": variant_simple_form,
         "display_type_form": display_type_form,
@@ -330,7 +348,7 @@ def add_property(request, product_id):
     """
     product = Product.objects.get(pk=product_id)
     property_form = PropertyForm(data=request.POST)
-    if request.POST and property_form.is_valid():
+    if property_form.is_valid():
         property = property_form.save(commit=False)
         property.title = property.name
         property.type = PROPERTY_SELECT_FIELD
@@ -349,20 +367,19 @@ def add_property(request, product_id):
         for i, product_property in enumerate(product.productsproperties.all()):
             product_property.position = i
             product_property.save()
-        property_form = PropertyForm()
 
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, property_form=property_form, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, as_string=True)]]
 
     result = simplejson.dumps({
         "html": html,
         "message": _(u"Property has been added."),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -370,12 +387,12 @@ def delete_property(request, product_id, property_id):
     """Deletes property with passed property id.
     """
     try:
-        prop = Property.objects.get(pk=property_id)
+        property = Property.objects.get(pk=property_id)
         product = Product.objects.get(pk=product_id)
     except ObjectDoesNotExist:
         pass
     else:
-        prop.delete()
+        property.delete()
         product_changed.send(product)
         pid = product.get_parent().pk
         invalidate_cache_group_id('properties-%s' % pid)
@@ -388,7 +405,7 @@ def delete_property(request, product_id, property_id):
         "close-dialog": True,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -421,7 +438,7 @@ def change_property_position(request):
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -433,36 +450,36 @@ def add_property_option(request, product_id):
 
     TODO: Do this with REFERER
     """
-    property_id = int(request.POST.get("property_id"))
-    property_option_form = PropertyOptionForm(property_id=property_id, data=request.POST)
+    property_option_form = PropertyOptionForm(data=request.POST)
     if property_option_form.is_valid():
-        property_option = property_option_form.save(commit=False)
-        property_option.property_id = property_id
-        property_option.position = 999
-        property_option.save()
+        names = request.POST.get("name").split(",")
+        position = 999
+        property_id = request.POST.get("property_id")
+        for name in names:
+            property_option = PropertyOption(name=name)
+            property_option.property_id = property_id
+            property_option.position = position
+            property_option.save()
+            position += 1
 
         # Refresh positions
         for i, option in enumerate(PropertyOption.objects.filter(property=property_id)):
             option.position = i
             option.save()
-        property_option_form = None
-        message = _(u"Option has been added.")
-    else:
-        message = _(u"Invalid data. Correct it and try again.")
 
     product = Product.objects.get(pk=product_id)
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, current_property_option_form=property_option_form, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, as_string=True)]]
 
     result = simplejson.dumps({
         "html": html,
-        "message": message,
+        "message": _(u"Option has been added."),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -488,7 +505,7 @@ def delete_property_option(request, product_id, option_id):
         "close-dialog": True,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -499,64 +516,80 @@ def add_variants(request, product_id):
     cache.delete("%s-variants%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX, product_id))
 
     product = Product.objects.get(pk=product_id)
+    all_properties = product.get_property_select_fields()
 
-    # First we need to prepare the requested properties for the use
-    # with cartesian product. That means if the keyword "all" is
-    # found we collect all options of this properties.
-    properties = []
-    for key, value in request.POST.items():
-        if key.startswith("property"):
-            property_id = key.split("_")[1]
-            if value == "all":
-                temp = []
-                for option in PropertyOption.objects.filter(property=property_id):
-                    temp.append("%s|%s" % (property_id, option.id))
-                properties.append(temp)
-            else:
-                properties.append(["%s|%s" % (property_id, value)])
+    variant_simple_form = ProductVariantSimpleForm(all_properties=all_properties, data=request.POST)
 
-    message = _('No variants have been added')
+    message = ''
+    added_count = 0
 
-    # Add variant(s)
-    for i, options in enumerate(manage_utils.cartesian_product(*properties)):
-        if product.has_variant(options):
-            continue
+    if variant_simple_form.is_valid():
+        # Add variant(s)
+        variants_count = product.variants.count()
 
-        variant_simple_form = ProductVariantSimpleForm(options=options, product=product, data=request.POST)
-        if variant_simple_form.is_valid():
-            variants_count = product.variants.count()
-            variant = variant_simple_form.save(commit=False)
-            variant.sku = "%s-%s" % (product.sku, i + 1)
-            variant.parent = product
-            variant.variant_position = (variants_count + i + 1) * 10
-            variant.sub_type = VARIANT
-            try:
-                variant.save()
-            except IntegrityError:
+        # First we need to prepare the requested properties for the use
+        # with cartesian product. That means if the keyword "all" is
+        # found we collect all options of this properties.
+        properties = []
+        for key, value in variant_simple_form.cleaned_data.items():
+            if key.startswith("property"):
+                property_id = key.split("_")[1]
+                if value == "all":
+                    temp = []
+                    for option in PropertyOption.objects.filter(property=property_id):
+                        temp.append("%s|%s" % (property_id, option.id))
+                    properties.append(temp)
+                elif value == '':
+                    continue
+                else:
+                    properties.append(["%s|%s" % (property_id, value)])
+
+        # Create a variant for every requested option combination
+        for i, options in enumerate(manage_utils.cartesian_product(*properties)):
+            if product.has_variant(options, only_active=False):
                 continue
 
-            # By default we copy the property groups of the product to
-            # the variants
-            for property_group in product.property_groups.all():
-                variant.property_groups.add(property_group)
+            pvcf = ProductVariantCreateForm(options=options, product=product, data=request.POST)
+            if pvcf.is_valid():
+                variant = pvcf.save(commit=False)
+                variant.sku = "%s-%s" % (product.sku, i + 1)
+                variant.parent = product
+                variant.variant_position = (variants_count + i + 1) * 10
+                variant.sub_type = VARIANT
 
-            # Save the value for this product and property.
-            for option in options:
-                property_id, option_id = option.split("|")
-                ProductPropertyValue.objects.create(product=variant, property_id=property_id, value=option_id, type=PROPERTY_VALUE_TYPE_VARIANT)
-                # By default we create also the filter values as this most of
-                # the users would expect.
-                if Property.objects.get(pk=property_id).filterable:
-                    ProductPropertyValue.objects.create(product=variant, property_id=property_id, value=option_id, type=PROPERTY_VALUE_TYPE_FILTER)
+                try:
+                    variant.save()
+                    added_count += 1
+                except IntegrityError:
+                    continue
+
+                # By default we copy the property groups of the product to
+                # the variants
+                for property_group in product.property_groups.all():
+                    variant.property_groups.add(property_group)
+
+                # Save the value for this product and property.
+                for option in options:
+                    property_id, option_id = option.split("|")
+                    ProductPropertyValue.objects.create(product=variant, property_id=property_id, value=option_id,
+                                                        type=PROPERTY_VALUE_TYPE_VARIANT)
+                    # By default we create also the filter values as this most of
+                    # the users would expect.
+                    if Property.objects.get(pk=property_id).filterable:
+                        ProductPropertyValue.objects.create(product=variant, property_id=property_id, value=option_id,
+                                                            type=PROPERTY_VALUE_TYPE_FILTER)
+            else:
+                continue
         else:
-            break
-    else:
-        message = _(u"Variants have been added.")
-        variant_simple_form = ProductVariantSimpleForm()
+            message = _(u"No variants have been added.")
+
+            if added_count > 0:
+                message = _(u"Variants have been added.")
+        variant_simple_form = ProductVariantSimpleForm(all_properties=all_properties)
 
     html = (
         ("#selectable-products-inline", _selectable_products_inline(request, product)),
-        ("#variants", manage_variants(request, product_id, variant_simple_form=variant_simple_form, as_string=True)),
+        ("#variants", manage_variants(request, product_id, as_string=True, variant_simple_form=variant_simple_form)),
     )
 
     result = simplejson.dumps({
@@ -564,7 +597,7 @@ def add_variants(request, product_id):
         "message": message,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -574,14 +607,15 @@ def update_variants(request, product_id):
     """
     product = lfs_get_object_or_404(Product, pk=product_id)
 
+    message = ''
     action = request.POST.get("action")
     if action == "delete":
         message = _(u"Variants have been deleted.")
         for key in request.POST.keys():
             if key.startswith("delete-"):
                 try:
-                    id = key.split("-")[1]
-                    variant = Product.objects.get(pk=id)
+                    prop_id = key.split("-")[1]
+                    variant = Product.objects.get(pk=prop_id)
                 except (IndexError, ObjectDoesNotExist):
                     continue
                 else:
@@ -590,19 +624,22 @@ def update_variants(request, product_id):
                         product.save()
                     variant.delete()
     elif action == "update":
+        # TODO: change all of these to formsets or something that will allow for error hangling/messages
         message = _(u"Variants have been saved.")
         languages_list = get_languages_list()
         for key, value in request.POST.items():
             if key.startswith("variant-"):
-                id = key.split("-")[1]
+                prop_id = key.split("-")[1]
                 try:
-                    variant = Product.objects.get(pk=id)
+                    variant = Product.objects.get(pk=prop_id)
                 except ObjectDoesNotExist:
                     continue
                 else:
                     for name in ("sku", "price"):
-                        value = request.POST.get("%s-%s" % (name, id))
+                        value = request.POST.get("%s-%s" % (name, prop_id))
                         if value != "":
+                            if name == 'price':
+                                value = float(value)
                             setattr(variant, name, value)
 
                     # slug and name
@@ -610,14 +647,19 @@ def update_variants(request, product_id):
                         trans_slug = build_localized_fieldname('slug', lang)
                         trans_name = build_localized_fieldname('name', lang)
 
-                        value = request.POST.get("%s-%s-%s" % ("slug", lang, id))
-                        if value != "":
-                            setattr(variant, trans_slug, value)
+                        value = request.POST.get("%s-%s-%s" % ("slug", lang, prop_id))
+                        if getattr(variant, trans_slug) != value:
+                            counter = 1
+                            new_slug = value[:80]
+                            while Product.objects.exclude(pk=variant.pk).filter(**{trans_slug: new_slug}).exists():
+                                new_slug = '%s-%s' % (value[:(79 - len(str(counter)))], counter)
+                                counter += 1
+                            setattr(variant, trans_slug, new_slug)
 
-                        setattr(variant, trans_name, request.POST.get("name-%s-%s" % (lang, id)))
-
+                        setattr(variant, trans_name, request.POST.get("name-%s-%s" % (lang, prop_id)))
+                    
                     # active
-                    active = request.POST.get("active-%s" % id)
+                    active = request.POST.get("active-%s" % prop_id)
                     if active:
                         variant.active = True
                     else:
@@ -625,14 +667,14 @@ def update_variants(request, product_id):
 
                     # active attributes
                     for name in ("active_price", "active_sku", "active_name"):
-                        value = request.POST.get("%s-%s" % (name, id))
+                        value = request.POST.get("%s-%s" % (name, prop_id))
                         if value:
                             setattr(variant, name, True)
                         else:
                             setattr(variant, name, False)
 
                     # position
-                    position = request.POST.get("position-%s" % id)
+                    position = request.POST.get("position-%s" % prop_id)
                     try:
                         variant.variant_position = int(position)
                     except ValueError:
@@ -645,48 +687,54 @@ def update_variants(request, product_id):
                         pass
                     else:
                         product.save()
-                
+
                 variant.save()
 
             elif key.startswith("property"):
                 # properties are marshalled as: property-variant_id|property_id
                 temp = key.split("-")[1]
                 variant_id, property_id = temp.split("|")
-                variant = Product.objects.get(pk=variant_id)
-                property = Property.objects.get(pk=property_id)
+                try:
+                    variant = Product.objects.get(pk=variant_id)
+                except Product.DoesNotExist:
+                    continue
+                prop = Property.objects.get(pk=property_id)
                 ppv = None
                 ppv_filterable = None
                 try:
                     ppv = ProductPropertyValue.objects.get(product=variant,
                                                            property_id=property_id,
                                                            type=PROPERTY_VALUE_TYPE_VARIANT)
-                    if property.filterable:
-                        ppv_filterable = ProductPropertyValue.objects.get(product=variant,
-                                                                          property_id=property_id,
-                                                                          type=PROPERTY_VALUE_TYPE_FILTER)
                 except ProductPropertyValue.DoesNotExist:
                     pass
 
+                if prop.filterable:  # it is possible that multiple values are selected for filter
+                    ppv_filterables = ProductPropertyValue.objects.filter(product=variant,
+                                                                          property_id=property_id,
+                                                                          type=PROPERTY_VALUE_TYPE_FILTER)
+
                 if value != '':
+                    is_changed = True
                     if not ppv:
                         ppv = ProductPropertyValue.objects.create(product=variant,
                                                                   property_id=property_id,
                                                                   type=PROPERTY_VALUE_TYPE_VARIANT,
                                                                   value=value)
-                        if property.filterable:
-                            ProductPropertyValue.objects.create(product=variant, property_id=property_id,
-                                                                value=value,
-                                                                type=PROPERTY_VALUE_TYPE_FILTER)
                     else:
+                        is_changed = ppv.value != value
                         ppv.value = value
                         ppv.save()
-                        if ppv_filterable:
-                            ppv_filterable.value = value
-                            ppv_filterable.save()
+
+                    if prop.filterable and is_changed:
+                        ppv_filterables.delete()
+                        ProductPropertyValue.objects.create(product=variant,
+                                                            property_id=property_id,
+                                                            value=value,
+                                                            type=PROPERTY_VALUE_TYPE_FILTER)
+
                 elif ppv:
                     ppv.delete()
-                    if ppv_filterable:
-                        ppv_filterable.delete()
+                    ppv_filterables.delete()
 
     # Refresh variant positions
     for i, variant in enumerate(product.variants.order_by("variant_position")):
@@ -708,7 +756,7 @@ def update_variants(request, product_id):
         "message": message,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -732,7 +780,7 @@ def edit_sub_type(request, product_id):
         "message": _(u"Sub type has been saved."),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 @permission_required("core.manage_shop")
@@ -756,7 +804,7 @@ def update_category_variant(request, product_id):
         "message": _(u"Category variant has been saved."),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def _refresh_property_positions(product_id):

@@ -89,6 +89,8 @@ class Command(BaseCommand):
             ('city', models.fields.CharField(max_length=50)),
             ('state', models.fields.CharField(max_length=50, null=True, blank=True)),
             ('country', models.fields.related.ForeignKey(to=Country, null=True, blank=True)),
+            ('created', models.fields.DateTimeField(auto_now_add=True, blank=True)),
+            ('modified', models.fields.DateTimeField(auto_now=True, blank=True)),
         ))
         db.send_create_signal('addresses', ['BaseAddress'])
 
@@ -218,7 +220,7 @@ class Command(BaseCommand):
             "invoice_city",
             "invoice_state",
             "invoice_code",
-            "invoice_country",
+            "invoice_country_id",
             "invoice_phone",
             "shipping_firstname",
             "shipping_lastname",
@@ -228,7 +230,7 @@ class Command(BaseCommand):
             "shipping_city",
             "shipping_state",
             "shipping_code",
-            "shipping_country",
+            "shipping_country_id",
             "shipping_phone",
         ]
 

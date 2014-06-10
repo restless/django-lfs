@@ -25,13 +25,13 @@ def livesearch(request, template_name="lfs/search/livesearch_results.html"):
     else:
         # Products
         query = Q(active=True) & \
-                Q(name__icontains=q) | \
+                ( Q(name__icontains=q) | \
                 Q(manufacturer__name__icontains=q) | \
-                Q(sku_manufacturer__icontains=q) & \
+                Q(sku_manufacturer__icontains=q) ) & \
                 Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT))
 
         temp = Product.objects.filter(query)
-        total = len(temp)
+        total = temp.count()
         products = temp[0:5]
 
         products = render_to_string(template_name, RequestContext(request, {
@@ -44,7 +44,7 @@ def livesearch(request, template_name="lfs/search/livesearch_results.html"):
             "state": "success",
             "products": products,
         })
-    return HttpResponse(result)
+    return HttpResponse(result, mimetype='application/json')
 
 
 def search(request, template_name="lfs/search/search_results.html"):
@@ -54,20 +54,20 @@ def search(request, template_name="lfs/search/search_results.html"):
     q = request.GET.get("q", "")
 
     # Products
-    query = Q(name__icontains=q) | \
+    query = Q(active=True) & \
+            ( Q(name__icontains=q) | \
             Q(manufacturer__name__icontains=q) | \
-            Q(sku_manufacturer__icontains=q) & \
+            Q(sku_manufacturer__icontains=q) ) & \
             Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT))
-    products = Product.objects.filter(query).filter(active=True)
+
+    products = Product.objects.filter(query)
 
     # Sorting
     sorting = request.session.get("sorting")
     if sorting:
         products = products.order_by(sorting)
 
-    total = 0
-    if products:
-        total += len(products)
+    total = products.count()
 
     return render_to_response(template_name, RequestContext(request, {
         "products": products,
