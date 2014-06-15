@@ -456,7 +456,7 @@ def add_property_option(request, product_id):
         position = 999
         property_id = request.POST.get("property_id")
         for name in names:
-            property_option = PropertyOption(name=name)
+            property_option = property_option_form.save(commit=False)
             property_option.property_id = property_id
             property_option.position = position
             property_option.save()
@@ -466,6 +466,9 @@ def add_property_option(request, product_id):
         for i, option in enumerate(PropertyOption.objects.filter(property=property_id)):
             option.position = i
             option.save()
+        message = _(u'Option has been added.')
+    else:
+        message = _(u'Invalid data. Correct it and try again.')
 
     product = Product.objects.get(pk=product_id)
     product_changed.send(product)
@@ -476,7 +479,7 @@ def add_property_option(request, product_id):
 
     result = simplejson.dumps({
         "html": html,
-        "message": _(u"Option has been added."),
+        "message": message,
     }, cls=LazyEncoder)
 
     return HttpResponse(result, mimetype='application/json')

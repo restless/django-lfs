@@ -1,7 +1,6 @@
 # python imports
 from datetime import datetime
 
-# import django
 from django.contrib.sitemaps import Sitemap
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured

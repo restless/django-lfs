@@ -239,10 +239,9 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
                       GROUP BY property_id""" % (PROPERTY_VALUE_TYPE_FILTER, product_ids, property_ids))
 
     for row in cursor.fetchall():
+        prop = properties_mapping[row[0]]
 
-        property = properties_mapping[row[0]]
-
-        if not property.is_number_field or not property.filterable:
+        if not prop.is_number_field or not prop.filterable:
             continue
 
         # If the filter for a property is already set, we display only the
@@ -251,11 +250,11 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
             values = set_filters[str(row[0])]
             result.append({
                 "id": row[0],
-                "position": property.position,
-                "object": property,
-                "name": property.name,
-                "title": property.title,
-                "unit": property.unit,
+                "position": prop.position,
+                "object": prop,
+                "name": prop.name,
+                "title": prop.title,
+                "unit": prop.unit,
                 "items": [{"min": float(values[0]), "max": float(values[1])}],
                 "show_reset": True,
                 "show_quantity": False,
@@ -263,15 +262,15 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
             continue
 
         # Otherwise we display all steps.
-        items = _calculate_steps(product_ids_str, property, row[1], row[2])
+        items = _calculate_steps(product_ids_str, prop, row[1], row[2])
 
         result.append({
             "id": row[0],
-            "position": property.position,
-            "object": property,
-            "name": property.name,
-            "title": property.title,
-            "unit": property.unit,
+            "position": prop.position,
+            "object": prop,
+            "name": prop.name,
+            "title": prop.title,
+            "unit": prop.unit,
             "show_reset": False,
             "show_quantity": True,
             "items": items,
@@ -321,10 +320,9 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
     set_filters = dict(product_filter)
     properties = {}
     for row in cursor.fetchall():
+        prop = properties_mapping[row[0]]
 
-        property = properties_mapping[row[0]]
-
-        if property.is_number_field or not property.filterable or not row[1]:
+        if prop.is_number_field or not prop.filterable or not row[1]:
             continue
 
         if row[0] in properties == False:
@@ -333,7 +331,7 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
         # If the property is a select field we want to display the name of the
         # option instead of the id.
         position = 1
-        if property.is_select_field:
+        if prop.is_select_field:
             try:
                 name = options_mapping[row[1]].name
                 position = options_mapping[row[1]].position
@@ -372,8 +370,7 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
     set_filter_keys = set_filters.keys()
 
     for property_id, values in properties.items():
-
-        property = properties_mapping[property_id]
+        prop = properties_mapping[property_id]
 
         # Sort the values. NOTE: This has to be done here (and not via SQL) as
         # the value field of the property is a char field and can't ordered
@@ -382,11 +379,11 @@ def get_product_filters(category, product_filter, price_filter, manufacturer_fil
 
         result.append({
             "id": property_id,
-            "position": property.position,
-            "unit": property.unit,
+            "position": prop.position,
+            "unit": prop.unit,
             "show_reset": str(property_id) in set_filter_keys,
-            "name": property.name,
-            "title": property.title,
+            "name": prop.name,
+            "title": prop.title,
             "items": values,
         })
 

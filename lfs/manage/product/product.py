@@ -509,8 +509,7 @@ def delete_product(request, product_id):
     url = reverse('lfs_manage_product_dispatcher')
     if product.is_variant():
         url = reverse("lfs_manage_product", kwargs={"product_id": product.parent_id})
-    else:
-        url = reverse("lfs_manage_product_dispatcher")
+
     product.delete()
 
     return HttpResponseRedirect(url)

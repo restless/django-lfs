@@ -1,6 +1,6 @@
 # django imports
 from copy import deepcopy
-from lfs.addresses import settings
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
@@ -9,6 +9,7 @@ from django.utils.translation import ugettext_lazy as _, check_for_language
 
 
 # lfs imports
+from lfs.addresses import settings as addresses_settings
 from lfs.core.models import Country
 from lfs.shipping.models import ShippingMethod
 from lfs.payment.models import PaymentMethod
@@ -88,7 +89,7 @@ class Customer(models.Model):
 
     def sync_default_to_selected_addresses(self, force=False):
         # Synchronize selected addresses with default addresses
-        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        auto_update = addresses_settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or not auto_update:
             logger.debug('sync default to selected. Customer: %s' % (self.pk))
             shipping_address = deepcopy(self.default_shipping_address)
@@ -119,7 +120,7 @@ class Customer(models.Model):
 
     def sync_selected_to_default_invoice_address(self, force=False):
         # Synchronize default invoice address with selected address
-        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        auto_update = addresses_settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or auto_update:
             logger.debug('Sync selected to default invoice. Customer: %s, Invoice address pk: %s' % (self.pk, self.selected_invoice_address.pk))
             address = deepcopy(self.selected_invoice_address)
@@ -129,7 +130,7 @@ class Customer(models.Model):
 
     def sync_selected_to_default_shipping_address(self, force=False):
         # Synchronize default shipping address with selected address
-        auto_update = settings.AUTO_UPDATE_DEFAULT_ADDRESSES
+        auto_update = addresses_settings.AUTO_UPDATE_DEFAULT_ADDRESSES
         if force or auto_update:
             logger.debug('Sync selected to default shipping. Customer: %s' % self.pk)
             address = deepcopy(self.selected_shipping_address)
@@ -202,3 +203,20 @@ class CreditCard(models.Model):
 
     def __unicode__(self):
         return u"%s / %s" % (self.type, self.owner)
+
+
+class PreferredLanguage(models.Model):
+    user = models.OneToOneField(User, verbose_name=_(u"Customer"), blank=False, null=False,
+                                related_name="preferred_language")
+    language = models.CharField(_('Preferred language'), max_length=5, default=settings.LANGUAGE_CODE)
+
+    def __unicode__(self):
+        return self.get_preferred_language()
+
+    def get_preferred_language(self):
+        if check_for_language(self.language):
+            return self.language
+        else:
+            self.language = settings.LANGUAGE_CODE
+            self.save()
+            return settings.LANGUAGE_CODE

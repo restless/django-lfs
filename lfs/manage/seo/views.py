@@ -8,14 +8,14 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.utils import simplejson
 from django.utils.translation import ugettext_lazy as _
-from django.conf.urls.defaults import patterns, url
+from django.conf.urls import patterns, url
 from django.views.generic.base import View
 from django.db.utils import DatabaseError
 
 # lfs.imports
 from lfs.caching.utils import lfs_get_object_or_404
 from lfs.core.utils import LazyEncoder
-from lfs.core.translation_utils import get_translatable_fields_for_model
+from lfs.core.translation_utils import get_translatable_fields_for_model_dict
 
 
 class SEOView(View):
@@ -50,7 +50,7 @@ class SEOView(View):
         if not form_k:
             # if form_klass is not specified then prepare default model form for SEO management
 
-            trans_dict = get_translatable_fields_for_model(model_klass)
+            trans_dict = get_translatable_fields_for_model_dict(model_klass)
             fields = []
             if not trans_dict:
                 trans_dict = {}

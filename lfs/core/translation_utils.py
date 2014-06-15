@@ -20,8 +20,16 @@ def build_localized_fieldname(field, l):
     return field
 
 
-def get_translatable_fields_for_model(cls):
-    return {}
+def get_translatable_fields_for_model_dict(cls):
+    out = {}
+    if uses_modeltranslation():
+        from modeltranslation.manager import get_translatable_fields_for_model
+        for field in get_translatable_fields_for_model(cls):
+            out[field] = []
+            for lang in get_languages_list():
+                out[field].append(build_localized_fieldname(field, lang))
+
+    return out
 
 
 def uses_modeltranslation():
@@ -37,7 +45,6 @@ LFSTranslationAdmin = ModelAdmin
 if uses_modeltranslation():
     try:
         from modeltranslation.utils import get_translation_fields, build_localized_fieldname
-        from modeltranslation.manager import get_translatable_fields_for_model
         from modeltranslation import settings as modeltranslation_settings
         AVAILABLE_LANGUAGES = modeltranslation_settings.AVAILABLE_LANGUAGES
         from modeltranslation.admin import TranslationAdmin
@@ -55,7 +62,9 @@ def prepare_fields_order(form, fields=None, exclude=None):
     """
     all_fields = fields_for_model(form.instance).keys()
 
-    trans_dict = get_translatable_fields_for_model(form.instance.__class__)
+    #trans_dict = get_translatable_fields_for_model(form.instance.__class__)
+    trans_dict = get_translatable_fields_for_model_dict(form.instance.__class__)
+
     out = []  # sort order
 
     if not exclude:
