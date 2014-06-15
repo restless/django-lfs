@@ -9,7 +9,7 @@
         <legend>{% trans "General" %}</legend>
         <div class="field">
             <div class="label">
-                {{ form.exclude_from_navigation.label_tag }}:
+                {{ form.exclude_from_navigation.label_tag }}
             </div>
             <div>
                 {{ form.exclude_from_navigation }}
@@ -18,7 +18,7 @@
         {% translatedfields form "name" %}
             <div class="field">
                 <div class="label">
-                {{ translated_field.label_tag }}:
+                {{ translated_field.label_tag }}
                 </div>
             {% if translated_field.errors %}
                 <div class="error">
@@ -36,7 +36,7 @@
         {% translatedfields form "slug" %}
             <div class="field">
                 <div class="label">
-                    {{ translated_field.label_tag }}:
+                    {{ translated_field.label_tag }}
                 </div>
                 {% if translated_field.errors %}
                     <div class="error">
@@ -54,7 +54,7 @@
     {% translatedfields form "short_description" %}
         <div class="field">
             <div class="label">
-                {{ translated_field.label_tag }}:
+                {{ translated_field.label_tag }}
             </div>
             {% if translated_field.errors %}
                 <div class="error">
@@ -71,7 +71,7 @@
     {% translatedfields form "description" %}
         <div class="field">
             <div class="label">
-                {{ translated_field.label_tag }}:
+                {{ translated_field.label_tag }}
             </div>
             {% if translated_field.errors %}
                 <div class="error">
@@ -106,7 +106,7 @@
             {% endtranslatedfields %}
             <div class="field">
                 <div class="label">
-                    {{ form.static_block.label_tag }}:
+                    {{ form.static_block.label_tag }}
                 </div>
                 {% if form.static_block.errors %}
                     <div class="error">

@@ -8,7 +8,6 @@ import urllib
 import json
 import time
 
-
 # django imports
 from django.conf import settings
 from django.contrib.redirects.models import Redirect
@@ -130,7 +129,6 @@ def set_message_to(response, msg):
     max_age = 2
     expires_time = time.time() + max_age
     expires = cookie_date(expires_time)
-
     if msg:
         response.set_cookie("message", lfs_quote(msg), max_age=max_age, expires=expires)
     return response

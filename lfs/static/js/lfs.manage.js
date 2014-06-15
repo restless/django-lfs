@@ -335,7 +335,7 @@ $(function() {
         $(this).parents("form:first").ajaxSubmit({
             dataType: 'json',
             success : function(data) {
-                $("#portlets-dialog").html(data);
+                $("#portlets-dialog").html(data['html']);
                 $("#portlets-dialog").dialog("open");
                 // translated fields
                 $.each(TRANSLATION_LANGUAGES, function(idx2, lang){
