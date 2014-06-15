@@ -213,7 +213,6 @@ def product_navigation(context, product):
     # product.
     if product.is_variant():
         product = product.parent
-        slug = product.slug
 
     # prepare cache key for product_navigation group
     # used to invalidate cache for all product_navigations at once
@@ -225,7 +224,7 @@ def product_navigation(context, product):
     if lm and product.manufacturer == lm:
         cache_key = "%s-%s-product-navigation-manufacturer-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                                   pn_cache_key,
-                                                                  slug)
+                                                                  product.pk)
         res = cache.get(cache_key)
         if res and sorting in res:
             return res[sorting]
@@ -238,7 +237,7 @@ def product_navigation(context, product):
         else:
             cache_key = "%s-%s-product-navigation-%s" % (settings.CACHE_MIDDLEWARE_KEY_PREFIX,
                                                          pn_cache_key,
-                                                         slug)
+                                                         product.pk)
             res = cache.get(cache_key)
             if res and sorting in res:
                 return res[sorting]

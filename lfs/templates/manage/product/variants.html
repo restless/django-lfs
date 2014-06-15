@@ -138,18 +138,64 @@
     <form action="{% url 'lfs_manage_add_variants' product.id %}"
           class="variants-add-form"
           method="post">
+        {% if variant_simple_form.non_field_errors %}
+            {{ variant_simple_form.non_field_errors }}
+        {% endif %}
         <table>
             <tr>
-                {% for field in variant_simple_form %}
+                <th>
+                    {% trans 'Slug' %}
+                </th>
+                <th>
+                    {% trans 'Name' %}
+                </th>
+                <th>
+                    {% trans 'Price' %}
+                </th>
+                {% for property in all_properties %}
                     <th>
-                        {{ field.label }}
+                        {{ property.name }}
                     </th>
                 {% endfor %}
                 <th></th>
             </tr>
             <tr>
-                {% for field in variant_simple_form %}
-                    <td>{{ field }}</td>
+                <td>
+                    {% translatedfields variant_simple_form "slug" %}
+                        <div class="translated-field">
+                            <div class="label">
+                                {{ translation_language }}:
+                            </div>
+                            {{ translated_field.errors }}
+                            {{ translated_field }}
+                        </div>
+                    {% endtranslatedfields %}
+                </td>
+                <td>
+                    {% translatedfields variant_simple_form "name" %}
+                        <div class="translated-field">
+                            <div class="label">
+                                {{ translation_language }}:
+                            </div>
+                            {{ translated_field.errors }}
+                            {{ translated_field }}
+                        </div>
+                    {% endtranslatedfields %}
+                </td>
+                <td>
+                    {{ variant_simple_form.price }}
+                </td>
+                {% for property in all_properties %}
+                    <td>
+                        <select name="property_{{ property.id }}">
+                            <option value="all">{% trans 'All' %}</option>
+                            {% for option in property.options.all %}
+                                <option value="{{ option.id }}">
+                                    {{ option.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
                 {% endfor %}
                 <td>
                     <input type="submit"
@@ -184,6 +230,8 @@
                 </th>
                 <th>
                     <input type="checkbox" class="select-all" value="active_name" />
+                </th>
+                <th>
                     {% trans 'Name' %}
                 </th>
                 {% for property in all_properties %}

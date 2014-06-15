@@ -332,7 +332,7 @@ def update_properties(request, product_id):
 
         # for select property each option is saved on its own so getlist is used
         if is_translated:
-            values_dict = {'product': product, 'property': prop, 'type': value_type}
+            values_dict = {'product': product, 'property': prop, 'type': ppv_type}
             for lang in langs:
                 tkey = 'property-%s-%s' % (lang, property_id)
                 value = request.POST.get(tkey)
@@ -344,7 +344,7 @@ def update_properties(request, product_id):
         else:
             for value in request.POST.getlist(key):
                 if prop.is_valid_value(value):
-                    values_dict = {'product': product, 'property': prop, 'type': value_type}
+                    values_dict = {'product': product, 'property': prop, 'type': ppv_type}
                     # for select field option we have only one value, so we're saving it to all translated fields
                     for lang in langs:
                         values_dict[build_localized_fieldname('value', lang)] = value

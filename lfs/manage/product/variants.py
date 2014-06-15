@@ -450,17 +450,13 @@ def add_property_option(request, product_id):
 
     TODO: Do this with REFERER
     """
+    property_id = int(request.POST.get("property_id"))
     property_option_form = PropertyOptionForm(data=request.POST)
     if property_option_form.is_valid():
-        names = request.POST.get("name").split(",")
-        position = 999
-        property_id = request.POST.get("property_id")
-        for name in names:
-            property_option = property_option_form.save(commit=False)
-            property_option.property_id = property_id
-            property_option.position = position
-            property_option.save()
-            position += 1
+        property_option = property_option_form.save(commit=False)
+        property_option.property_id = property_id
+        property_option.position = 999
+        property_option.save()
 
         # Refresh positions
         for i, option in enumerate(PropertyOption.objects.filter(property=property_id)):
