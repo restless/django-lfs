@@ -1,3 +1,5 @@
+import json
+
 # django imports
 from django.conf import settings
 from django.contrib.auth.decorators import permission_required
@@ -133,7 +135,7 @@ def save_data_tab(request):
     else:
         message = _(u"Please correct the indicated errors.")
 
-    result = simplejson.dumps({
+    result = json.dumps({
         "html": [["#data", data_tab(request, shop, form)]],
         "message": message,
     }, cls=LazyEncoder)
