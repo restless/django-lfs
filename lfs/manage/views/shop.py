@@ -8,7 +8,6 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.template.loader import render_to_string
-from django.utils import simplejson
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_POST
 
@@ -158,7 +157,7 @@ def save_default_values_tab(request):
     else:
         message = _(u"Please correct the indicated errors.")
 
-    result = simplejson.dumps({
+    result = json.dumps({
         "html": [["#default_values", default_values_tab(request, shop, form)]],
         "message": message
     }, cls=LazyEncoder)
@@ -184,7 +183,7 @@ def save_order_numbers_tab(request):
     else:
         message = _(u"Please correct the indicated errors.")
 
-    result = simplejson.dumps({
+    result = json.dumps({
         "html": [["#order_numbers", order_numbers_tab(request, shop, form)]],
         "message": message,
     }, cls=LazyEncoder)

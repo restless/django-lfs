@@ -448,6 +448,11 @@ $(function() {
         $('#locale_switcher').submit();
         return false;
     });
+
+    $body.on('change', ".property-checkbox", function() {
+        var url = $(this).attr("url");
+        document.location=url;
+    });
 });
 
 $(document).ajaxSend(function(event, xhr, settings) {
