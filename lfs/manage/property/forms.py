@@ -23,9 +23,9 @@ class PropertyDataForm(ModelForm):
     """
     def __init__(self, *args, **kwargs):
         super(PropertyDataForm, self).__init__(*args, **kwargs)
-        prepare_fields_order(self, fields=("position", "name", "title", "unit", "filterable", "display_no_results",
+        prepare_fields_order(self, fields=("position", "name", "title", "unit", "variants", "filterable",
                                            "configurable", "required", "display_on_product"))
-
+        
     def clean(self):
         """ If translations are used then at least one name is required
         """
