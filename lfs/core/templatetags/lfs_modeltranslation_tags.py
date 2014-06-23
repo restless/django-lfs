@@ -3,7 +3,7 @@ from django.template import Library
 from django import template
 from django.utils.safestring import mark_safe
 from django.utils import translation
-from django.utils.translation import ugettext
+from django.conf import settings
 
 from lfs.core.translation_utils import (get_translation_fields, build_localized_fieldname, get_languages_list,
                                         get_default_language, uses_modeltranslation)
@@ -235,4 +235,6 @@ def get_translation_languages_js():
 
 @register.inclusion_tag('lfs/shop/_language_switch_menu.html')
 def language_switch_menu():
-    return {'uses_modeltranslation': uses_modeltranslation()}
+    languages = [(code, label) for code, label in settings.LANGUAGES]
+    return {'uses_modeltranslation': uses_modeltranslation(),
+            'languages': languages}

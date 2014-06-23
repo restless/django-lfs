@@ -35,7 +35,7 @@ class ActionGroup(models.Model):
     name
         The name of the group.
     """
-    name = models.CharField(_(u"Name"), blank=True, max_length=100, unique=True)
+    name = models.CharField(_(u"Name"), blank=True, max_length=100)
 
     class Meta:
         ordering = ("name", )
