@@ -257,7 +257,7 @@ def set_price_filter(request, category_id):
     return HttpResponseRedirect(url)
 
 
-def set_manufacturer_filter(request, category_slug, manufacturer_id):
+def set_manufacturer_filter(request, category_id, manufacturer_id):
     """ Saves the given manufacturer filter to session. Redirects to the category with given slug.
     """
     try:
@@ -270,8 +270,8 @@ def set_manufacturer_filter(request, category_slug, manufacturer_id):
     except (ValueError, TypeError) as e:
         pass
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
-    return HttpResponseRedirect(url)
+    cat = Category.objects.get(pk=category_id)
+    return HttpResponseRedirect(cat.get_absolute_url())
 
 
 def reset_price_filter(request, category_id):
@@ -297,22 +297,22 @@ def reset_filter(request, category_id, property_id):
     return HttpResponseRedirect(url)
 
 
-def reset_manufacturer_filter(request, category_slug, manufacturer_id):
+def reset_manufacturer_filter(request, category_id, manufacturer_id):
     if "manufacturer-filter" in request.session:
         if int(manufacturer_id) in request.session["manufacturer-filter"]:
             request.session["manufacturer-filter"].remove(int(manufacturer_id))
             request.session["manufacturer-filter"] = request.session["manufacturer-filter"]
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
-    return HttpResponseRedirect(url)
+    cat = Category.objects.get(pk=category_id)
+    return HttpResponseRedirect(cat.get_absolute_url())
 
 
-def reset_all_manufacturer_filter(request, category_slug):
+def reset_all_manufacturer_filter(request, category_id):
     if "manufacturer-filter" in request.session:
         del request.session["manufacturer-filter"]
 
-    url = reverse("lfs_category", kwargs={"slug": category_slug})
-    return HttpResponseRedirect(url)
+    cat = Category.objects.get(pk=category_id)
+    return HttpResponseRedirect(cat.get_absolute_url())
 
 
 def reset_number_filter(request, category_id, property_id):
