@@ -906,7 +906,8 @@ class Product(models.Model):
             else:
                 return self.active_base_price == CHOICES_YES
         else:
-            return self.active_base_price == CHOICES_YES
+            return self.active_base_price in (1, CHOICES_YES)  # we have to check for 1 as it's value set
+                                                               # by checkbox input
 
     def get_base_packing_price(self, request, with_properties=True):
         """
@@ -1819,7 +1820,7 @@ class Product(models.Model):
             else:
                 return self.active_packing_unit == CHOICES_YES
         else:
-            return self.active_packing_unit == CHOICES_YES
+            return self.active_packing_unit in (1, CHOICES_YES)
 
     def get_packing_info(self):
         """
