@@ -38,7 +38,7 @@ class NTFieldsNode(template.Node):
             context['translation_language'] = lang
             if lang == default_language:
                 context['translation_default_language'] = True
-                context['uses_modeltranlsation'] = uses_translation
+                context['uses_modeltranslation'] = uses_translation
                 setattr(context['translated_field'], 'default_language', True)
                 attrs = context['translated_field'].field.widget.attrs
                 if not attrs:
