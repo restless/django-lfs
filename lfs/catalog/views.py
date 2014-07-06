@@ -41,7 +41,7 @@ def file_download(request, language=None, file_id=None):
     """Delivers files to the browser.
     """
     download_file = lfs_get_object_or_404(File, pk=file_id)
-    response = HttpResponse(download_file.file, mimetype='application/binary')
+    response = HttpResponse(download_file.file, content_type='application/binary')
     response['Content-Disposition'] = 'attachment; filename=%s' % download_file.title
 
     return response
@@ -60,7 +60,7 @@ def select_variant(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result, mimetype='application/json')
+    return HttpResponse(result, content_type='application/json')
 
 
 def calculate_packing(request, id, quantity=None, with_properties=False, as_string=False, template_name="lfs/catalog/packing_result.html"):
@@ -107,7 +107,7 @@ def calculate_packing(request, id, quantity=None, with_properties=False, as_stri
         "html": html,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result, mimetype='application/json')
+    return HttpResponse(result, content_type='application/json')
 
 
 def calculate_price(request, id):
@@ -143,7 +143,7 @@ def calculate_price(request, id):
         "message": _("Price has been changed according to your selection."),
     }, cls=LazyEncoder)
 
-    return HttpResponse(result, mimetype='application/json')
+    return HttpResponse(result, content_type='application/json')
 
 
 def select_variant_from_properties(request):
@@ -174,7 +174,7 @@ def select_variant_from_properties(request):
         "message": msg,
     }, cls=LazyEncoder)
 
-    return HttpResponse(result, mimetype='application/json')
+    return HttpResponse(result, content_type='application/json')
 
 
 def set_number_filter(request):
