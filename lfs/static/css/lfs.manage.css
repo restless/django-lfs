@@ -39,6 +39,12 @@ div.label a:hover {
     color: #000;
 }
 
+.translated-field div.label {
+    display: inline-block;
+    min-width: 20px;
+    text-align: right;
+}
+
 img {
     border:none;
 }
