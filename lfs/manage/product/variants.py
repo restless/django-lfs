@@ -149,20 +149,22 @@ class ProductVariantCreateForm(ModelForm):
         product_slug = getattr(self.product, trans_slug, '')
         if product_slug is None:
             product_slug = ''
-        if product_slug + trans_slug.replace('-', '') == '':
-            slug = ''
-        else:
-            slug = "%s-%s" % (product_slug, trans_slug)
-            slug = slug.rstrip('-')
+        #if product_slug + trans_slug.replace('-', '') == '':
+        #    slug = ''
+        #else:
+        #    slug = "%s-%s" % (product_slug, trans_slug)
+        #    slug = slug.rstrip('-')
+        slug = product_slug
 
         # create unique slug
-        slug = slug[:80]
-        new_slug = slug
-        counter = 1
-        while Product.objects.filter(**{trans_slug: new_slug}).exists():
-            new_slug = '%s-%s' % (slug[:(79 - len(str(counter)))], counter)
-            counter += 1
-        slug = new_slug
+        if slug:
+            slug = slug[:80]
+            new_slug = slug
+            counter = 1
+            while Product.objects.filter(**{trans_slug: new_slug}).exists():
+                new_slug = '%s-%s' % (slug[:(79 - len(str(counter)))], counter)
+                counter += 1
+            slug = new_slug
         return slug        
 
     def clean(self):
