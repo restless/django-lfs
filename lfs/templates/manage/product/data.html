@@ -5,6 +5,9 @@
 <form id="product-data-form"
       action="{% url 'lfs_manage_edit_product_data' product.id %}"
       method="post">
+        {% if form.non_field_errors %}
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        {% endif %}
 
         <fieldset>
             <legend>{% trans "General" %}</legend>

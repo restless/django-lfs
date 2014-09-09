@@ -79,11 +79,14 @@ class ProductAddForm(forms.ModelForm):
             values_slug = [self.cleaned_data.get(trans_name, '') for trans_name in slug_fields]
 
             if not any(values_name):
-                raise forms.ValidationError(_('At least one name has to be defined'))
+                for trans_name in name_fields:
+                    del cleaned_data[trans_name]
+                self._errors[name_fields[0]] = self.error_class([_('At least one name has to be defined')])
 
             if not any(values_slug):
-                raise forms.ValidationError(_('At least one slug has to be defined'))
-
+                for trans_name in slug_fields:
+                    del cleaned_data[trans_name]
+                self._errors[slug_fields[0]] = self.error_class([_('At least one slug has to be defined')])
         # check for uniqueness
         for fname in slug_fields:
             val = self.cleaned_data.get(fname)
@@ -526,7 +529,6 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
     products = _get_filtered_products_for_product_view(request)
     paginator = Paginator(products, 25)
     page = paginator.page(request.REQUEST.get("page", 1))
-
     # Transform empty field / "on" from checkbox to integer
     data = dict(request.POST.items())
     if not product.is_variant():
@@ -539,7 +541,6 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
         form = VariantDataForm(instance=product, data=data)
     else:
         form = ProductDataForm(instance=product, data=data)
-
     if form.is_valid():
         form.save()
         if product.sub_type == VARIANT:
@@ -550,7 +551,6 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
         message = _(u"Product data has been saved.")
     else:
         message = _(u"Please correct the indicated errors.")
-        print form.errors
 
     form_html = render_to_string(template_name, RequestContext(request, {
         "product": product,
