@@ -93,17 +93,18 @@ class PropertyForm(ModelForm):
             if not any(values_name):
                 raise ValidationError(_('At least one name has to be defined'))
 
-        # check for uniqueness
-        for fname in name_fields:
-            val = self.cleaned_data.get(fname).strip()
-            if val:
-                qs = self._meta.model.objects.filter(**{fname: val})
-                if self.instance.pk:
-                    qs = qs.exclude(pk=self.instance.pk)
-                if qs.exists():
-                    msg = _(u"Name '%s' already exists!") % val
-                    self._errors[fname] = self.error_class([msg])
-                    del cleaned_data[fname]
+        # Disabled because these are local properties that are not unique among products
+        ## check for uniqueness
+        #for fname in name_fields:
+        #    val = self.cleaned_data.get(fname).strip()
+        #    if val:
+        #        qs = self._meta.model.objects.filter(**{fname: val})
+        #        if self.instance.pk:
+        #            qs = qs.exclude(pk=self.instance.pk)
+        #        if qs.exists():
+        #            msg = _(u"Name '%s' already exists!") % val
+        #            self._errors[fname] = self.error_class([msg])
+        #            del cleaned_data[fname]
 
         return cleaned_data
 
@@ -229,14 +230,16 @@ class DefaultVariantForm(ModelForm):
 
 
 @permission_required("core.manage_shop")
-def manage_variants(request, product_id, as_string=False, variant_simple_form=None, template_name="manage/product/variants.html"):
+def manage_variants(request, product_id, as_string=False, variant_simple_form=None, form=None, template_name="manage/product/variants.html"):
     """Manages the variants of a product.
     """
     product = Product.objects.get(pk=product_id)
 
     all_properties = product.get_variants_properties()
 
-    property_form = PropertyForm()
+    property_form = form
+    if property_form is None:
+        property_form = PropertyForm()
     property_option_form = PropertyOptionForm()
     if not variant_simple_form:
         variant_simple_form = ProductVariantSimpleForm(all_properties=all_properties)
@@ -370,12 +373,11 @@ def add_property(request, product_id):
         for i, product_property in enumerate(product.productsproperties.all()):
             product_property.position = i
             product_property.save()
-
     product_changed.send(product)
     pid = product.get_parent().pk
     invalidate_cache_group_id('properties-%s' % pid)
 
-    html = [["#variants", manage_variants(request, product_id, as_string=True)]]
+    html = [["#variants", manage_variants(request, product_id, as_string=True, form=property_form)]]
 
     result = json.dumps({
         "html": html,
