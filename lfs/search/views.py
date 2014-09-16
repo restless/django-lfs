@@ -8,8 +8,9 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 
 # lfs imports
+from lfs.core.translation_utils import get_translation_fields
 from lfs.catalog.models import Product
-from lfs.catalog.settings import STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT
+from lfs.catalog.settings import STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT, CONFIGURABLE_PRODUCT
 
 
 def livesearch(request, template_name="lfs/search/livesearch_results.html"):
@@ -23,11 +24,17 @@ def livesearch(request, template_name="lfs/search/livesearch_results.html"):
         })
     else:
         # Products
+        names = get_translation_fields('name')
+
+        or_clause = Q()
+        for name in names:
+            or_clause |= Q(**{'%s__icontains' % name: q})
+        or_clause |= Q(manufacturer__name__icontains=q)
+        or_clause |= Q(sku_manufacturer__icontains=q)
+
         query = Q(active=True) & \
-                ( Q(name__icontains=q) | \
-                Q(manufacturer__name__icontains=q) | \
-                Q(sku_manufacturer__icontains=q) ) & \
-                Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT))
+                or_clause & \
+                Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT, CONFIGURABLE_PRODUCT))
 
         temp = Product.objects.filter(query)
         total = temp.count()
@@ -53,11 +60,17 @@ def search(request, template_name="lfs/search/search_results.html"):
     q = request.GET.get("q", "")
 
     # Products
+    names = get_translation_fields('name')
+
+    or_clause = Q()
+    for name in names:
+        or_clause |= Q(**{'%s__icontains' % name: q})
+    or_clause |= Q(manufacturer__name__icontains=q)
+    or_clause |= Q(sku_manufacturer__icontains=q)
+
     query = Q(active=True) & \
-            ( Q(name__icontains=q) | \
-            Q(manufacturer__name__icontains=q) | \
-            Q(sku_manufacturer__icontains=q) ) & \
-            Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT))
+            or_clause & \
+            Q(sub_type__in=(STANDARD_PRODUCT, PRODUCT_WITH_VARIANTS, VARIANT, CONFIGURABLE_PRODUCT))
 
     products = Product.objects.filter(query)
 
