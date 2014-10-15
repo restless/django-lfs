@@ -125,14 +125,14 @@ def lfs_reverse(*args, **kwargs):
 def customer_language(user):
     from lfs.customer.models import Customer, PreferredLanguage
 
-    try:
-        customer = Customer.objects.get(user=user)
-        if customer.user:
-            customer.user.preferred_language
-        else:
-            customer = None
-    except (PreferredLanguage.DoesNotExist, Customer.DoesNotExist):
-        customer = None
+    customer = None
+    if user:
+        try:
+            customer = Customer.objects.get(user=user)
+            if customer.user:
+                customer.user.preferred_language
+        except (PreferredLanguage.DoesNotExist, Customer.DoesNotExist):
+            pass
 
     curr_language = translation.get_language()
 
