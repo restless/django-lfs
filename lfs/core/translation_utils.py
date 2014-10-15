@@ -137,7 +137,10 @@ def customer_language(user):
     curr_language = translation.get_language()
 
     if customer:
-        translation.activate(customer.user.preferred_language.get_preferred_language())
+        try:
+            translation.activate(customer.user.preferred_language.get_preferred_language())
+        except PreferredLanguage.DoesNotExist:
+            pass
     yield
     if customer:
         translation.activate(curr_language)
