@@ -98,7 +98,7 @@ function sortable() {
                 data: {"objs": serialized},
                 success: function(data) {
                     data = safeParseJSON(data);
-                    $.jGrowl(data["message"])
+                    $.jGrowl(data["message"], {theme: 'lfs'})
                 }
            });
         }
@@ -128,7 +128,7 @@ $(function() {
     var message = $.cookie("message");
 
     if (message != null) {
-        $.jGrowl(message);
+        $.jGrowl(message, {theme: 'lfs'});
         $.removeCookie('message', { path: '/' });
     }
 
@@ -159,7 +159,7 @@ $(function() {
         height: 680,
         draggable: false,
         resizable: false,
-        position: ["center", 200]
+        position: { my: "center", at: "center"}
     });
 
     // Generic ajax save button
@@ -196,7 +196,7 @@ $(function() {
                 }
 
                 if (data["message"]) {
-                    $.jGrowl(data["message"]);
+                    $.jGrowl(data["message"], {theme: 'lfs'});
                 }
 
                 hide_ajax_loading();
@@ -221,7 +221,7 @@ $(function() {
             for (var html in data["html"])
                 $(data["html"][html][0]).html(data["html"][html][1]);
             if (data["message"]) {
-                $.jGrowl(data["message"]);
+                $.jGrowl(data["message"], {theme: 'lfs'});
             }
             if (data["open-dialog"]) {
                 $("#dialog").dialog("open");
@@ -299,7 +299,7 @@ $(function() {
         height: 680,
         draggable: false,
         resizable: false,
-        position: ["center", 200]
+        position: { my: "center", at: "center"}
     });
 
 
@@ -470,7 +470,7 @@ $(function() {
         modal: true,
         draggable: false,
         resizable: false,
-        position: ["center", 200]
+        position: { my: "center", at: "center"}
     });
 
     $body.on('click', '.delete-link', function() {
@@ -524,7 +524,7 @@ $(function() {
                 data: {"serialized": serialized},
                 success: function(data) {
                     data = safeParseJSON(data);
-                    $.jGrowl(data["message"])
+                    $.jGrowl(data["message"], {theme: 'lfs'})
                 }
            });
         }
@@ -551,7 +551,7 @@ $(function() {
                 data: {"categories": serialized},
                 success: function(data) {
                     data = safeParseJSON(data);
-                    $.jGrowl(data["message"])
+                    $.jGrowl(data["message"], {theme: 'lfs'})
                 }
            });
         }

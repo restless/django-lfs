@@ -70,8 +70,7 @@ def images(request, as_string=False, template_name="manage/images/images.html"):
 
     if as_string:
         return result
-    else:
-        return HttpResponse(result)
+    return HttpResponse(result)
 
 
 @permission_required("core.manage_shop")
