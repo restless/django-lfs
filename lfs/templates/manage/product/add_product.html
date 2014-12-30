@@ -38,7 +38,7 @@
     </div>
     <script>
         $(function() {
-            var ids = '#id_name'
+            var ids = '#id_name';
             var l = TRANSLATION_LANGUAGES.length;
             for (var i=0; i<l; i++){
                 var lang = TRANSLATION_LANGUAGES[i];
@@ -47,7 +47,7 @@
 
             $(ids).on("keyup", function() {
                 var $this = $(this);
-                var slug = $this.val()
+                var slug = $this.val();
                 slug = URLify(slug, 200);
                 var id = $this.attr('id');
                 var slug_id = '#id_slug';
