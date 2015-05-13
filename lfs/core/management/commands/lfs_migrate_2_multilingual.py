@@ -1,7 +1,5 @@
 from django.core.management.base import BaseCommand
-
-# south imports
-from south.db import db
+from django.db import models, migrations
 
 
 class Command(BaseCommand):
@@ -11,6 +9,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """
         """
-        db.delete_unique("catalog_category", "slug")
-        db.delete_unique("catalog_product", "slug")
-        db.delete_unique("page_page", "slug")
+        migrations.AlterField(
+            model_name='catalog_category',
+            name='slug',
+            field=models.SlugField(unique=False, verbose_name='Slug'))
+        migrations.AlterField(
+            model_name='catalog_product',
+            name='slug',
+            field=models.SlugField(help_text="The unique last part of the Product's URL.", unique=False, max_length=120, verbose_name='Slug'))
+        migrations.AlterField(
+            model_name='page_page',
+            name='slug',
+            field=models.SlugField(unique=False, max_length=100, verbose_name='Slug'))

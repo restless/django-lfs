@@ -12,3 +12,4 @@ class FilterPortletForm(forms.ModelForm):
 
     class Meta:
         model = FilterPortlet
+        exclude = ()

@@ -51,7 +51,9 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 ppv_values = {}
 
                 try:
-                    ppv = ProductPropertyValue.objects.get(property=prop, product=product,
+                    ppv = ProductPropertyValue.objects.get(property=prop,
+                                                           property_group=property_group,
+                                                           product=product,
                                                            type=PROPERTY_VALUE_TYPE_DEFAULT)
                 except ProductPropertyValue.DoesNotExist:
                     ppv_id = None
@@ -110,7 +112,9 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product,
+                ppvs = ProductPropertyValue.objects.filter(property=prop,
+                                                           property_group=property_group,
+                                                           product=product,
                                                            type=PROPERTY_VALUE_TYPE_FILTER)
                 value_ids = [ppv.value for ppv in ppvs]
 
@@ -176,7 +180,9 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 ppv_values = {}
 
                 # Try to get the value, if it already exists.
-                ppvs = ProductPropertyValue.objects.filter(property=prop, product=product,
+                ppvs = ProductPropertyValue.objects.filter(property=prop,
+                                                           property_group=property_group,
+                                                           product=product,
                                                            type=PROPERTY_VALUE_TYPE_DISPLAY)
                 value_ids = [ppv.value for ppv in ppvs]
 
@@ -235,13 +241,23 @@ def manage_properties(request, product_id, template_name="manage/product/propert
                 })
 
     if product.is_variant():
+        product_variant_properties_dict = {}
         qs = ProductPropertyValue.objects.filter(product=product, type=PROPERTY_VALUE_TYPE_VARIANT)
         for ppv in qs:
             try:
                 property_option = PropertyOption.objects.get(property_id=ppv.property_id, pk=ppv.value)
-                product_variant_properties.append(property_option)
+                property_group_name = ppv.property_group.name if ppv.property_group_id else ''
+                group_dict = product_variant_properties_dict.setdefault(ppv.property_group_id or 0,
+                                                                       {'property_group_name': property_group_name,
+                                                                        'properties': []})
+                group_dict['properties'].append(property_option)
             except (ProductPropertyValue.DoesNotExist, PropertyOption.DoesNotExist):
                 continue
+
+        groups = product_variant_properties_dict.values()
+        sorted_groups = sorted(groups, key=lambda group: group['property_group_name'])
+        for group in sorted_groups:
+            product_variant_properties.append(group)
 
     # Generate list of all property groups; used for group selection
     product_property_group_ids = [p.id for p in product.property_groups.all()]
@@ -311,10 +327,10 @@ def update_properties(request, product_id):
         if not key.startswith("property"):
             continue
 
-        # for select fields we only have one field (no translations)
+        # for select fields we only have two fields (no translations)
         # but for text/number fields we have translated versions of fields
         property_parts = key.split("-")
-        is_translated = len(property_parts) > 2
+        is_translated = len(property_parts) > 3
 
         if is_translated:
             # translated field
@@ -322,34 +338,46 @@ def update_properties(request, product_id):
             # only process default language - other translation are processed with it
             if lang != default_lang:
                 continue
-            property_id = property_parts[2]
+            property_group_id = property_parts[2]
+            property_id = property_parts[3]
         else:
             # select field
-            property_id = property_parts[1]
+            property_group_id = property_parts[1]
+            property_id = property_parts[2]
 
+        #_property, property_group_id, property_id = key.split("-")
+        if property_group_id == '0':
+            property_group_id = None
         prop = get_object_or_404(Property, pk=property_id)
         product = get_object_or_404(Product, pk=product_id)
 
         # for select property each option is saved on its own so getlist is used
         if is_translated:
-            values_dict = {'product': product, 'property': prop, 'type': ppv_type}
+            values_dict = {'product': product, 'property_group_id': property_group_id, 'property': prop,
+                           'type': ppv_type}
             for lang in langs:
                 tkey = 'property-%s-%s' % (lang, property_id)
                 value = request.POST.get(tkey)
                 if prop.is_valid_value(value):
                     values_dict[build_localized_fieldname('value', lang)] = value
             else:
-                # only create PPV if all values were valid
+                # we have to use get_or_create because it is possible that we get same property values twice, eg.
+                # if we have a SELECT typ property assigned to two different groups, and both these groups bound
+                # to the product. In this case we will have same property shown twice at management page
                 ProductPropertyValue.objects.get_or_create(**values_dict)
         else:
             for value in request.POST.getlist(key):
                 if prop.is_valid_value(value):
-                    values_dict = {'product': product, 'property': prop, 'type': ppv_type}
+                    values_dict = {'product': product, 'property_group_id': property_group_id, 'property': prop,
+                                   'type': ppv_type}
                     # for select field option we have only one value, so we're saving it to all translated fields
                     for lang in langs:
                         values_dict[build_localized_fieldname('value', lang)] = value
+                    # we have to use get_or_create because it is possible that we get same property values twice, eg.
+                    # if we have a SELECT typ property assigned to two different groups, and both these groups bound
+                    # to the product. In this case we will have same property shown twice at management page
                     ProductPropertyValue.objects.get_or_create(**values_dict)
-    
+
     update_product_cache(product)
     url = reverse("lfs_manage_product", kwargs={"product_id": product_id})
     return HttpResponseRedirect(url)

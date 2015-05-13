@@ -1,6 +1,7 @@
 from lfs.core.translation_utils import uses_modeltranslation
-
+print 'if uses modeltranslation'
 if uses_modeltranslation():
+    print ' uses modeltranslation'
     from modeltranslation.translator import translator, TranslationOptions
     from .models import Action, Country, Shop, ActionGroup
 

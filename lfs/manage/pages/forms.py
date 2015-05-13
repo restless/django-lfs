@@ -59,6 +59,7 @@ class PageAddForm(ModelForm):
 
     class Meta:
         model = Page
+        fields = ("title", "slug")
 
 
 class PageForm(PageAddForm):
@@ -75,3 +76,4 @@ class PageForm(PageAddForm):
 
     class Meta:
         model = Page
+        exclude = ("position", "meta_title", "meta_description", "meta_keywords")

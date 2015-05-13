@@ -16,6 +16,7 @@ class PropertyAddForm(ModelForm):
 
     class Meta:
         model = Property
+        fields = ["name"]
 
 
 class PropertyDataForm(ModelForm):
@@ -60,6 +61,8 @@ class PropertyDataForm(ModelForm):
 
     class Meta:
         model = Property
+        fields = ["position", "name", "title", "unit", "variants", "filterable", "configurable", "required", "display_on_product"]
+
 
 
 class PropertyTypeForm(ModelForm):
@@ -132,3 +135,4 @@ class PropertyOptionForm(ModelForm):
 
     class Meta:
         model = PropertyOption
+        fields = ("position", "name", "price")

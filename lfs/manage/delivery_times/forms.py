@@ -23,3 +23,4 @@ class DeliveryTimeForm(ModelForm):
 
     class Meta:
         model = DeliveryTime
+        exclude = ()

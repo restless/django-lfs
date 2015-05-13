@@ -12,4 +12,4 @@ class RecentProductsForm(forms.ModelForm):
 
     class Meta:
         model = RecentProductsPortlet
-
+        exclude = ()

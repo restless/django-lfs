@@ -9,7 +9,7 @@ from lfs.cart.models import Cart
 
 # Load logger
 import logging
-logger = logging.getLogger("default")
+logger = logging.getLogger(__name__)
 
 
 def get_or_create_cart(request):
@@ -113,7 +113,7 @@ def update_cart_after_login(request):
                 properties = {}
                 for pv in session_cart_item.properties.all():
                     properties[unicode(pv.property.id)] = pv.value
-                user_cart.add(session_cart_item.product, properties=properties, amount=session_cart_item.amount)
+                user_cart.add(session_cart_item.product, properties_dict=properties, amount=session_cart_item.amount)
             session_cart.delete()
     except ObjectDoesNotExist:
         pass

@@ -10,7 +10,7 @@ from lfs.core.views import one_time_setup, TextTemplateView
 
 # Robots
 urlpatterns = patterns('django.views.generic.simple',
-    (r'^robots.txt$', TextTemplateView.as_view(template_name='lfs/shop/robots.txt'))
+    url(r'^robots.txt$', TextTemplateView.as_view(template_name='lfs/shop/robots.txt'))
 )
 
 # Sitemaps
@@ -41,12 +41,13 @@ urlpatterns += patterns('lfs.catalog.views',
     url(r'^product-form-dispatcher', "product_form_dispatcher", name="lfs_product_dispatcher"),
     url(r'^set-sorting', "set_sorting", name="lfs_catalog_set_sorting"),
     url(r'^set-product-number-filter', "set_number_filter", name="lfs_set_product_number_filter"),
-    url(r'^set-product-filter/(?P<category_id>[-\w]+)/(?P<property_id>\d+)/(?P<value>.+)', "set_filter", name="lfs_set_product_filter"),
+
+    url(r'^set-product-filter/(?P<category_id>[-\w]+)/(?P<property_group_id>\d+)/(?P<property_id>\d+)/(?P<value>.+)', "set_filter", name="lfs_set_product_filter"),
     url(r'^set-price-filter/(?P<category_id>[-\w]+)/$', "set_price_filter", name="lfs_set_price_filter"),
     url(r'^set-manufacturer-filter/(?P<category_id>[-\w]+)/(?P<manufacturer_id>\d+)/$', "set_manufacturer_filter", name="lfs_set_manufacturer_filter"),
     url(r'^reset-price-filter/(?P<category_id>[-\w]+)/$', "reset_price_filter", name="lfs_reset_price_filter"),
-    url(r'^reset-number-filter/(?P<category_id>[-\w]+)/(?P<property_id>\d+)', "reset_number_filter", name="lfs_reset_number_filter"),
-    url(r'^reset-product-filter/(?P<category_id>[-\w]+)/(?P<property_id>\d+)', "reset_filter", name="lfs_reset_product_filter"),
+    url(r'^reset-number-filter/(?P<category_id>[-\w]+)/(?P<property_group_id>\d+)/(?P<property_id>\d+)', "reset_number_filter", name="lfs_reset_number_filter"),
+    url(r'^reset-product-filter/(?P<category_id>[-\w]+)/(?P<property_group_id>\d+)/(?P<property_id>\d+)', "reset_filter", name="lfs_reset_product_filter"),
     url(r'^reset-manufacturer-filter/(?P<category_id>[-\w]+)/(?P<manufacturer_id>\d+)', "reset_manufacturer_filter", name="lfs_reset_manufacturer_filter"),
     url(r'^reset-all-manufacturer-filter/(?P<category_id>[-\w]+)', "reset_all_manufacturer_filter", name="lfs_reset_all_manufacturer_filter"),
     url(r'^reset-all-product-filter/(?P<category_id>[-\w]+)', "reset_all_filter", name="lfs_reset_all_product_filter"),

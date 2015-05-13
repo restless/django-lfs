@@ -5,6 +5,7 @@ from django.forms import ModelForm
 from lfs.core.models import Action
 from lfs.core.translation_utils import prepare_fields_order
 
+
 class ActionForm(ModelForm):
     """Form to edit an action.
     """
@@ -14,6 +15,7 @@ class ActionForm(ModelForm):
 
     class Meta:
         model = Action
+        exclude = ("parent", "position")
 
 
 class ActionAddForm(ModelForm):
@@ -25,3 +27,4 @@ class ActionAddForm(ModelForm):
 
     class Meta:
         model = Action
+        fields = ("title", "link", "group")

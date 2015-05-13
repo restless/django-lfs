@@ -16,6 +16,7 @@ class ShippingMethodAddForm(ModelForm):
 
     class Meta:
         model = ShippingMethod
+        fields = ("name",)
 
 
 class ShippingMethodForm(ModelForm):
@@ -28,3 +29,4 @@ class ShippingMethodForm(ModelForm):
 
     class Meta:
         model = ShippingMethod
+        exclude = ("priority",)

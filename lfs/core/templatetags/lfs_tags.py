@@ -34,7 +34,7 @@ from lfs.shipping import utils as shipping_utils
 from lfs.manufacturer.models import Manufacturer
 from lfs.core.translation_utils import build_localized_fieldname
 
-logger = logging.getLogger("default")
+logger = logging.getLogger(__name__)
 register = template.Library()
 
 
@@ -203,7 +203,12 @@ def product_navigation(context, product):
     """Provides previous and next product links.
     """
     request = context.get("request")
-    sorting = request.session.get("sorting", 'effective_price')
+
+    try:
+        default_sorting = settings.LFS_PRODUCTS_SORTING
+    except AttributeError:
+        default_sorting = "effective_price"
+    sorting = request.session.get("sorting", default_sorting)
     if sorting.strip() == '':
         sorting = 'effective_price'
         request.session["sorting"] = sorting

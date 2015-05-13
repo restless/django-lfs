@@ -12,7 +12,7 @@ from lfs.tax.models import Tax
 
 # Load logger
 import logging
-logger = logging.getLogger("default")
+logger = logging.getLogger(__name__)
 
 
 class ActiveShippingMethodManager(models.Manager):
@@ -20,7 +20,7 @@ class ActiveShippingMethodManager(models.Manager):
     A manager which return just active shipping methods.
     """
     def active(self):
-        return super(ActiveShippingMethodManager, self).get_query_set().filter(active=True)
+        return super(ActiveShippingMethodManager, self).get_queryset().filter(active=True)
 
 
 class ShippingMethod(models.Model, Criteria):
@@ -83,6 +83,7 @@ class ShippingMethod(models.Model, Criteria):
 
     class Meta:
         ordering = ("priority", )
+        app_label = 'shipping'
 
     def __unicode__(self):
         return self.name
@@ -155,6 +156,7 @@ class ShippingMethodPrice(models.Model, Criteria):
 
     class Meta:
         ordering = ("priority", )
+        app_label = 'shipping'
 
     def __unicode__(self):
         return u"%s" % self.price

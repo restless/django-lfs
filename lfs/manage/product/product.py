@@ -104,6 +104,7 @@ class ProductAddForm(forms.ModelForm):
 
     class Meta:
         model = Product
+        fields = ("name", "slug")
 
 
 class ProductSubTypeForm(forms.ModelForm):
@@ -128,6 +129,11 @@ class ProductDataForm(ProductAddForm):
                   "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
                   "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
                   "active_base_price", "base_price_unit", "base_price_amount")
+        fields = ("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
+            "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
+            "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
+            "active_base_price", "base_price_unit", "base_price_amount")
+
         kwargs['fields'] = fields
         super(ProductDataForm, self).__init__(*args, **kwargs)
         self.fields["template"].widget = SelectImage(choices=PRODUCT_TEMPLATES)
@@ -138,6 +144,10 @@ class ProductDataForm(ProductAddForm):
 
     class Meta:
         model = Product
+        fields = ("active", "name", "slug", "manufacturer", "sku", "sku_manufacturer", "price", "tax", "price_calculator",
+            "short_description", "description", "for_sale", "for_sale_price", "static_block", "template",
+            "active_price_calculation", "price_calculation", "price_unit", "unit", "type_of_quantity_field",
+            "active_base_price", "base_price_unit", "base_price_amount")
 
     def clean(self):
         super(ProductDataForm, self).clean()
@@ -181,7 +191,6 @@ class VariantDataForm(forms.ModelForm):
                     "active_related_products", "active_static_block", "static_block", "template",
                     "active_base_price", "base_price_unit", "base_price_amount"))
 
-
         self.fields["template"].widget = SelectImage(choices=PRODUCT_TEMPLATES)
         self.fields["active_base_price"].widget = Select(choices=CHOICES)
 
@@ -214,6 +223,15 @@ class VariantDataForm(forms.ModelForm):
 
     class Meta:
         model = Product
+        fields = ("active", "active_name", "name", "slug", "manufacturer", "active_sku", "sku", "sku_manufacturer",
+            "active_price", "price", "price_calculator", "active_short_description", "short_description", "active_description",
+            "description", "for_sale", "for_sale_price", "active_for_sale", "active_for_sale_price",
+            "active_related_products", "active_static_block", "static_block", "template",
+            "active_base_price", "base_price_unit", "base_price_amount")
+
+
+class PaginationDataForm(forms.Form):
+    page = forms.IntegerField(_('Page'), widget=HiddenInput)
 
 
 class ProductStockForm(forms.ModelForm):
@@ -361,10 +379,14 @@ def product_data_form(request, product_id, template_name="manage/product/data.ht
 
     redirect_tos = prepare_redirect_tos(product)
 
+    page = request.REQUEST.get('page', 1)
+    pagination_form = PaginationDataForm(data={'page': page})
+
     return render_to_string(template_name, RequestContext(request, {
         "product": product,
         "form": form,
         "redirect_tos": redirect_tos,
+        "pagination_form": pagination_form,
     }))
 
 
@@ -551,9 +573,12 @@ def edit_product_data(request, product_id, template_name="manage/product/data.ht
     else:
         message = _(u"Please correct the indicated errors.")
 
+    pagination_form = PaginationDataForm(data={'page': page.number})
+
     form_html = render_to_string(template_name, RequestContext(request, {
         "product": product,
         "form": form,
+        "pagination_form": pagination_form,
         "redirect_tos": prepare_redirect_tos(product),
     }))
 

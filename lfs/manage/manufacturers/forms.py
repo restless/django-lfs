@@ -25,6 +25,7 @@ class ManufacturerDataForm(ModelForm):
 
     class Meta:
         model = Manufacturer
+        fields = ("name", "slug", "short_description", "description", "image")
 
 
 class ViewForm(ModelForm):

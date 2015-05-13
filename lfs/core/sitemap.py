@@ -11,7 +11,6 @@ from lfs.catalog.models import Product
 from lfs.core.models import Shop
 from lfs.core.translation_utils import get_languages_list
 from lfs.page.models import Page
-from localeurl.templatetags.localeurl_tags import chlocale
 
 
 class LFSLocaleSitemap(Sitemap):
@@ -125,4 +124,4 @@ class ShopSitemap(LFSLocaleSitemap):
         return datetime.now()
 
     def location(self, obj):
-        return chlocale("/", translation.get_language())
+        return '/'

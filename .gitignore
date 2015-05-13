@@ -12,4 +12,5 @@ lfs.db
 *sitestatic/
 *media/
 .idea/
-.idea/
+*dist/
+*docs/_build/

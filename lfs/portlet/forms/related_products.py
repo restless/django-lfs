@@ -12,4 +12,4 @@ class RelatedProductsForm(forms.ModelForm):
 
     class Meta:
         model = RelatedProductsPortlet
-
+        exclude = ()

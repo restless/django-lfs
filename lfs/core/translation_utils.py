@@ -6,11 +6,6 @@ from django.contrib.admin import ModelAdmin
 from django.forms.models import fields_for_model
 from django.utils import translation
 
-try:
-    from localeurl.models import reverse
-except ImportError:
-    from django.core.urlresolvers import reverse
-
 
 def get_translation_fields(field):
     return [field]
@@ -61,9 +56,12 @@ def prepare_fields_order(form, fields=None, exclude=None):
         fields = ['slug_en', 'slug_de', 'name_en', 'name_de', 'is_active']
     """
     all_fields = fields_for_model(form.instance).keys()
+    print 'all: ', all_fields
+    print 'form fields: ', form.fields.keys()
 
     #trans_dict = get_translatable_fields_for_model(form.instance.__class__)
     trans_dict = get_translatable_fields_for_model_dict(form.instance.__class__)
+    print 'trans dict: ', trans_dict
 
     out = []  # sort order
 
@@ -113,12 +111,6 @@ def get_default_language():
     except ImportError:
         DEFAULT_LANGUAGE = settings.LANGUAGE_CODE
     return DEFAULT_LANGUAGE
-
-
-def lfs_reverse(*args, **kwargs):
-    if not 'localeurl' in settings.INSTALLED_APPS and 'locale' in kwargs:
-        del kwargs['locale']
-    return reverse(*args, **kwargs)
 
 
 @contextmanager

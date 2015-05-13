@@ -12,3 +12,4 @@ class AverageRatingForm(forms.ModelForm):
 
     class Meta:
         model = AverageRatingPortlet
+        exclude = ()

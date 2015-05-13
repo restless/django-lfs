@@ -3,6 +3,7 @@ from .average_rating import AverageRatingForm
 from .cart import CartPortletForm
 from .categories import CategoriesPortletForm
 from .delivery_time import DeliveryTimeForm
+from .featured import FeaturedForm
 from .filter import FilterPortletForm
 from .forsale import ForsaleForm
 from .latest import LatestForm

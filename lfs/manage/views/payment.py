@@ -36,6 +36,7 @@ class PaymentMethodAddForm(ModelForm):
 
     class Meta:
         model = PaymentMethod
+        fields = ("name",)
 
 
 class PaymentMethodForm(ModelForm):
@@ -48,6 +49,7 @@ class PaymentMethodForm(ModelForm):
 
     class Meta:
         model = PaymentMethod
+        exclude = ("deletable", "priority")
 
 
 # Starting pages. This pages are called directly via a request

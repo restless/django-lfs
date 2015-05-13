@@ -43,3 +43,4 @@ class StaticBlockForm(ModelForm):
 
     class Meta:
         model = StaticBlock
+        exclude = ("position",)

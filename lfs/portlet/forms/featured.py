@@ -12,3 +12,4 @@ class FeaturedForm(forms.ModelForm):
 
     class Meta:
         model = FeaturedPortlet
+        exclude = ()

@@ -12,4 +12,4 @@ class ForsaleForm(forms.ModelForm):
 
     class Meta:
         model = ForsalePortlet
-
+        exclude = ()

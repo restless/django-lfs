@@ -57,14 +57,8 @@ class FeaturedPortlet(Portlet):
     def form(self, **kwargs):
         """
         """
+        from lfs.portlet.forms import FeaturedForm
         return FeaturedForm(instance=self, **kwargs)
 
     def __unicode__(self):
         return u"%s" % self.id
-
-
-class FeaturedForm(forms.ModelForm):
-    """
-    """
-    class Meta:
-        model = FeaturedPortlet

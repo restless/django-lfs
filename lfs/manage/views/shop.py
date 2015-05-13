@@ -46,6 +46,9 @@ class ShopDataForm(ModelForm):
 
     class Meta:
         model = Shop
+        fields = ("name", "shop_owner", "from_email", "notification_emails",
+            "description", "image", "static_block", "checkout_type", "confirm_toc",
+            "google_analytics_id", "ga_site_tracking", "ga_ecommerce_tracking")
 
 
 class ShopDefaultValuesForm(ModelForm):

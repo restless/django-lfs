@@ -7,7 +7,7 @@ from lfs.caching.utils import lfs_get_object_or_404
 from lfs.core.managers import ActiveManager
 from lfs.core.models import Shop
 from lfs.core.utils import get_default_shop
-from lfs.core.translation_utils import lfs_reverse
+from django.core.urlresolvers import reverse
 
 
 class Page(models.Model):
@@ -30,6 +30,7 @@ class Page(models.Model):
 
     class Meta:
         ordering = ("position", )
+        app_label = 'page'
 
     def __unicode__(self):
         return self.title
@@ -41,7 +42,7 @@ class Page(models.Model):
         return shop.image
 
     def get_absolute_url(self):
-        return lfs_reverse('lfs_page_view', kwargs={"slug": self.slug, "page_id": self.pk})
+        return reverse('lfs_page_view', kwargs={"slug": self.slug, "page_id": self.pk})
 
     def get_parent_for_portlets(self):
         """Returns the parent for parents.

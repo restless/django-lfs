@@ -18,3 +18,8 @@ class SEOForm(ModelForm):
 
     class Meta:
         model = Product
+        fields = (
+            "active_meta_title", "meta_title",
+            "active_meta_keywords", "meta_keywords",
+            "active_meta_description", "meta_description",
+        )

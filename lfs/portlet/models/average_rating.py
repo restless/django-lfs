@@ -40,4 +40,3 @@ class AverageRatingPortlet(Portlet):
     def form(self, **kwargs):
         from lfs.portlet.forms import AverageRatingForm
         return AverageRatingForm(instance=self, **kwargs)
-

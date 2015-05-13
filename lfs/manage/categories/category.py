@@ -80,6 +80,7 @@ class CategoryAddForm(ModelForm):
 
     class Meta:
         model = Category
+        fields = ("name", "slug")
 
 
 class CategoryForm(CategoryAddForm):
@@ -95,6 +96,8 @@ class CategoryForm(CategoryAddForm):
 
     class Meta:
         model = Category
+        fields = ("name", "slug", "short_description", "description",
+                  "exclude_from_navigation", "image", "static_block")
 
 
 @permission_required("core.manage_shop")
